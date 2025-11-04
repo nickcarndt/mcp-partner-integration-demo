@@ -1,9 +1,13 @@
-# MCP HTTP Server
+# MCP Partner Integration Demo (HTTPS + CORS + Idempotency)
 
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![CI](https://img.shields.io/badge/CI-manual-yellow)](https://github.com/yourusername/mcp-http-server)
-[![Deploy](https://img.shields.io/badge/deploy-Cloud%20Run-orange)](https://cloud.google.com/run)
+[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520-green?logo=node.js)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://img.shields.io/badge/CI-local-yellow.svg)](#)
+[![Deploy: Cloud Run](https://img.shields.io/badge/Deploy-Cloud%20Run-orange.svg?logo=googlecloud)](https://cloud.google.com/run)
+[![Version](https://img.shields.io/badge/version-v0.1.1-green.svg)](CHANGELOG.md)
+[![Docs](https://img.shields.io/badge/docs-complete-brightgreen.svg)](docs/)
+
+Reference MCP tools server for ChatGPT partner integrations (Shopify + Stripe mocks).
 
 A Model Context Protocol (MCP) HTTP server that exposes tools via REST endpoints, designed for multi-agent workflows in Cursor.
 
@@ -174,7 +178,7 @@ This project implements production-ready security and reliability patterns:
 ✅ **Health Probes** - `/healthz` and `/healthz/ready` for orchestration  
 ✅ **HTTPS Support** - Self-signed certificates for local development  
 
-**Note:** CSP and HSTS are relaxed in development mode. See `src/server.ts` for production TODO comments.
+**Note:** CSP and HSTS are disabled in dev to avoid sticky HSTS and CSP script blocks; enable in prod (TODO markers in `src/server.ts`).
 
 ## Troubleshooting
 
@@ -290,14 +294,23 @@ This project is configured for multi-agent workflows in Cursor. See:
 
 ## Configuration
 
-### Environment Variables
+> **No secrets required:** This server never calls LLMs and does not need API keys in Demo Mode.
 
-Create a `.env` file (see `.env.example`):
+> In Live Mode, supply Shopify/Stripe credentials via environment variables; do **not** check secrets into the repo.
 
-```bash
-PORT=8080
-DEMO_MODE=true
-```
+### Environment Variables (dev defaults)
+
+| Name           | Example                     | Purpose                                  |
+|----------------|-----------------------------|------------------------------------------|
+| DEMO_MODE      | `true`                      | Use mocks for Shopify/Stripe             |
+| HTTP_PORT      | `8080`                      | HTTP listener (redirects to HTTPS)       |
+| HTTPS_PORT     | `8443`                      | HTTPS listener                           |
+| TLS_CERT       | `cert/localhost.pem`        | Local TLS cert (mkcert/OpenSSL)          |
+| TLS_KEY        | `cert/localhost-key.pem`    | Local TLS key                            |
+| ALLOWED_ORIGINS| `https://localhost:8443`    | **Exact** normalized origins (CORS)      |
+| LOG_LEVEL      | `info`                      | Logging verbosity (debug, info, warn)    |
+
+**Note:** `ALLOWED_ORIGINS` must be exact normalized origins (protocol+host+port). The server uses strict Set-based matching, not prefix checks.
 
 ### Scripts
 
@@ -388,8 +401,10 @@ Uses [Pino](https://getpino.io/) for high-performance structured logging:
 - Configurable log levels via `LOG_LEVEL` env var
 
 ### Error Handling
-**Error Taxonomy:**
+**Error Taxonomy (v0.1.1):**
 - `BAD_PARAMS` (400): Invalid request parameters
+- `BAD_JSON` (400): Malformed JSON body
+- `CORS_BLOCKED` (403): Origin not allowed
 - `UNKNOWN_TOOL` (404): Tool not found
 - `NOT_FOUND` (404): Path not found
 - `TIMEOUT` (500): Request timeout
