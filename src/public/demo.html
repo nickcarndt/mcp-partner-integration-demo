@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Note: We intentionally DO NOT use upgrade-insecure-requests because we need HTTP -->
+  <title>MCP HTTP Server Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #667eea;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 2rem;
+    }
+    .meta {
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 1.5rem;
+    }
+    .meta code {
+      background: #f1f3f5;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      font-size: 0.8rem;
+    }
+    .tool-section {
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+    .tool-section h2 {
+      color: #667eea;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #555;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #5568d3;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: white;
+      border-radius: 6px;
+      border: 2px solid #e0e0e0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .result pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 0.9rem;
+    }
+    .status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+    .status.ok {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 0.5rem;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 MCP HTTP Server Demo</h1>
+    <p class="subtitle">Test the MCP tools interactively</p>
+    <p class="meta">
+      Origin: <code id="origin-label">detecting...</code> • Mode: <code id="mode-label">detecting...</code>
+    </p>
+
+    <div class="tool-section">
+      <h2>🔌 Health Check</h2>
+      <button id="health-btn" type="button">Check Health</button>
+      <div id="health-result"></div>
+    </div>
+
+    <div class="tool-section">
+      <h2>📡 Ping Tool</h2>
+      <div class="form-group">
+        <label for="ping-name">Name (optional):</label>
+        <input type="text" id="ping-name" placeholder="World" value="Nick">
+      </div>
+      <button id="ping-btn" type="button">Call Ping</button>
+      <div id="ping-result"></div>
+    </div>
+
+    <div class="tool-section">
+      <h2>🛍️ Shopify: Search Products</h2>
+      <div class="form-group">
+        <label for="shopify-query">Query:</label>
+        <input type="text" id="shopify-query" placeholder="laptop" value="laptop">
+      </div>
+      <div class="form-group">
+        <label for="shopify-limit">Limit:</label>
+        <input type="number" id="shopify-limit" placeholder="10" value="5">
+      </div>
+      <button id="shopify-btn" type="button">Search Products</button>
+      <div id="shopify-result"></div>
+    </div>
+
+    <div class="tool-section">
+      <h2>💳 Stripe: Create Checkout Session</h2>
+      <div class="form-group">
+        <label for="stripe-items">Items (JSON array):</label>
+        <textarea id="stripe-items" rows="3">[{"priceId":"price_123","quantity":1}]</textarea>
+      </div>
+      <div class="form-group">
+        <label for="stripe-success">Success URL:</label>
+        <input type="text" id="stripe-success" value="https://example.com/success">
+      </div>
+      <div class="form-group">
+        <label for="stripe-cancel">Cancel URL:</label>
+        <input type="text" id="stripe-cancel" value="https://example.com/cancel">
+      </div>
+      <button id="stripe-btn" type="button">Create Session</button>
+      <div id="stripe-result"></div>
+    </div>
+  </div>
+
+
+
+<script>
+  (() => {
+    'use strict';
+
+    const statusBadge = (variant, label) =>
+      `<span class="status ${variant}">${label}</span>`;
+
+    const formatValue = (value) => {
+      if (value === undefined || value === null || value === '') {
+        return '';
+      }
+      if (typeof value === 'string') {
+        return value;
+      }
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch {
+        return String(value);
+      }
+    };
+
+    class RequestError extends Error {
+      constructor(message, options = {}) {
+        super(message);
+        this.name = 'RequestError';
+        this.status = options.status ?? null;
+        this.body = options.body;
+        this.details = options.details;
+      }
+    }
+
+    async function request(path, options = {}) {
+      const init = {
+        cache: 'no-store',
+        ...options,
+      };
+      init.headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      };
+
+      let response;
+      try {
+        response = await fetch(path, init);
+      } catch (networkErr) {
+        throw new RequestError(networkErr?.message || 'Network error', {
+          details: networkErr,
+        });
+      }
+
+      const text = await response.text();
+      let body = null;
+
+      if (text) {
+        try {
+          body = JSON.parse(text);
+        } catch {
+          throw new RequestError('Invalid JSON response from server', {
+            status: response.status,
+            body: text,
+          });
+        }
+      }
+
+      if (!response.ok || (body && body.ok === false)) {
+        const message =
+          body?.error?.message ||
+          body?.message ||
+          `Request failed (${response.status})`;
+
+        throw new RequestError(message, {
+          status: response.status,
+          body: body ?? text,
+        });
+      }
+
+      return body ?? {};
+    }
+
+    function showLoading(target, label) {
+      target.innerHTML = `<div class="loading"></div> ${label}`;
+    }
+
+    function showSuccess(target, payload) {
+      target.innerHTML = `
+        ${statusBadge('ok', 'OK')}
+        <div class="result">
+          <pre>${JSON.stringify(payload, null, 2)}</pre>
+        </div>
+      `;
+    }
+
+    function showError(target, error) {
+      const parts = [];
+      const statusLine = error.status ? `HTTP ${error.status}\n` : '';
+      parts.push(`<pre>${statusLine}${error.message || 'Unexpected error'}</pre>`);
+
+      if (error.body) {
+        parts.push(`<pre>${formatValue(error.body)}</pre>`);
+      }
+
+      if (error.details) {
+        parts.push(`<pre>${formatValue(error.details)}</pre>`);
+      }
+
+      parts.push(
+        '<p style="color: #721c24; margin-top: 0.5rem;">Confirm the server is running (<code>npm run dev</code>) and trust the local HTTPS certificate if your browser prompts.</p>'
+      );
+
+      target.innerHTML = `
+        ${statusBadge('error', 'ERROR')}
+        <div class="result">
+          ${parts.join('\n')}
+        </div>
+      `;
+
+      console.error('Request failed:', error);
+    }
+
+    function bindAction(buttonId, resultId, action, loadingLabel = 'Working...') {
+      const button = document.getElementById(buttonId);
+      const result = document.getElementById(resultId);
+
+      if (!button || !result) {
+        console.error('Failed to bind action', { buttonId, resultId });
+        return;
+      }
+
+      button.addEventListener('click', () => {
+        showLoading(result, loadingLabel);
+        button.disabled = true;
+
+        Promise.resolve()
+          .then(action)
+          .then((payload) => showSuccess(result, payload))
+          .catch((err) => {
+            const error =
+              err instanceof RequestError
+                ? err
+                : new RequestError(err?.message || 'Unexpected error', {
+                    details: err,
+                  });
+            showError(result, error);
+          })
+          .finally(() => {
+            button.disabled = false;
+          });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const originLabel = document.getElementById('origin-label');
+      if (originLabel) {
+        originLabel.textContent = window.location.origin;
+      }
+
+      const modeLabel = document.getElementById('mode-label');
+      if (modeLabel) {
+        request('/healthz')
+          .then((payload) => {
+            modeLabel.textContent = payload?.demoMode ? 'DEMO' : 'LIVE';
+          })
+          .catch(() => {
+            modeLabel.textContent = 'unknown';
+          });
+      }
+
+      bindAction(
+        'health-btn',
+        'health-result',
+        () => request('/healthz'),
+        'Checking...'
+      );
+
+      bindAction(
+        'ping-btn',
+        'ping-result',
+        () => {
+          const input = document.getElementById('ping-name');
+          const raw = input?.value?.trim();
+          const params = raw ? { name: raw } : {};
+
+          return request('/tools/ping', {
+            method: 'POST',
+            body: JSON.stringify({ params }),
+          });
+        },
+        'Calling ping...'
+      );
+
+      bindAction(
+        'shopify-btn',
+        'shopify-result',
+        () => {
+          const queryInput = document.getElementById('shopify-query');
+          const limitInput = document.getElementById('shopify-limit');
+
+          const query = queryInput?.value?.trim() || 'laptop';
+          const limitValue = parseInt(limitInput?.value || '', 10);
+
+          const params =
+            Number.isFinite(limitValue) && limitValue > 0
+              ? { query, limit: limitValue }
+              : { query };
+
+          return request('/tools/shopify.searchProducts', {
+            method: 'POST',
+            body: JSON.stringify({ params }),
+          });
+        },
+        'Searching products...'
+      );
+
+      bindAction(
+        'stripe-btn',
+        'stripe-result',
+        () => {
+          const itemsInput = document.getElementById('stripe-items');
+          const successInput = document.getElementById('stripe-success');
+          const cancelInput = document.getElementById('stripe-cancel');
+
+          let items;
+          try {
+            items = JSON.parse(itemsInput?.value || '[]');
+          } catch (parseErr) {
+            throw new RequestError('JSON parse error for items field', {
+              details: parseErr.message,
+            });
+          }
+
+          return request('/tools/stripe.createCheckoutSession', {
+            method: 'POST',
+            body: JSON.stringify({
+              params: {
+                items,
+                successUrl: successInput?.value || '',
+                cancelUrl: cancelInput?.value || '',
+              },
+            }),
+          });
+        },
+        'Creating checkout session...'
+      );
+    });
+  })();
+</script>
+
+
+</body>
+</html>
