@@ -1,0 +1,146 @@
+# Security Best Practices
+
+This document outlines security practices for the MCP HTTP Server project.
+
+## 🔐 Secrets Management
+
+### Never Commit Secrets
+
+**DO NOT commit:**
+- API keys (Shopify, Stripe, etc.)
+- Access tokens
+- Secret keys
+- Passwords
+- Private keys or certificates
+- Cloudflare tunnel credentials
+- Any `.env` files (except `.env.example`)
+
+### Protected Files
+
+The following files are automatically ignored by `.gitignore`:
+- `.env` - Local environment variables
+- `.env.local` - Local overrides
+- `*.pem`, `*.key`, `*.crt` - Certificates and keys
+- `.cloudflared/credentials.json` - Cloudflare tunnel credentials
+- `secrets/` - Any secrets directory
+- `credentials.json` - Credential files
+
+### Environment Variables
+
+All sensitive configuration should use environment variables:
+
+```bash
+# Local development - use .env file (not committed)
+SHOPIFY_STORE_URL=your-store.myshopify.com
+SHOPIFY_ACCESS_TOKEN=shpat_...
+STRIPE_SECRET_KEY=sk_test_...
+```
+
+### Production Deployment
+
+For production deployments, use secure secret management:
+
+**Google Cloud Run:**
+- Use Google Secret Manager for sensitive values
+- Pass secrets via `--set-secrets` flag (not `--set-env-vars`)
+- Never hardcode secrets in deployment scripts
+
+**Example:**
+```bash
+# ✅ GOOD - Use Secret Manager
+gcloud run deploy mcp-server \
+  --set-secrets "STRIPE_SECRET_KEY=stripe-secret-key:latest" \
+  ...
+
+# ❌ BAD - Don't pass secrets directly
+gcloud run deploy mcp-server \
+  --set-env-vars "STRIPE_SECRET_KEY=sk_test_..." \
+  ...
+```
+
+## 🔍 Security Checklist
+
+Before committing code, verify:
+
+- [ ] No `.env` files are committed
+- [ ] No API keys or tokens in code
+- [ ] No hardcoded credentials
+- [ ] `.gitignore` includes all sensitive file patterns
+- [ ] Documentation uses placeholder values only
+- [ ] No secrets in deployment scripts
+- [ ] Cloudflare tunnel credentials are ignored
+
+## 🚨 If Secrets Are Exposed
+
+If you accidentally commit secrets:
+
+1. **Immediately rotate the exposed secrets:**
+   - Generate new API keys
+   - Revoke old keys
+   - Update all systems using the keys
+
+2. **Remove from git history (if recent):**
+   ```bash
+   # Remove file from history (use with caution)
+   git filter-branch --force --index-filter \
+     "git rm --cached --ignore-unmatch .env" \
+     --prune-empty --tag-name-filter cat -- --all
+   ```
+
+3. **Force push (coordinate with team):**
+   ```bash
+   git push origin --force --all
+   ```
+
+4. **Consider using git-secrets or similar tools:**
+   ```bash
+   # Install git-secrets
+   brew install git-secrets
+   
+   # Add patterns to prevent committing secrets
+   git secrets --register-aws
+   git secrets --add 'shpat_[a-zA-Z0-9]{32,}'
+   git secrets --add 'sk_test_[a-zA-Z0-9]{32,}'
+   git secrets --add 'sk_live_[a-zA-Z0-9]{32,}'
+   ```
+
+## 📋 Environment Variable Reference
+
+### Required for Production
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `SHOPIFY_STORE_URL` | Shopify store domain | `your-store.myshopify.com` |
+| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | `shpat_...` (from Secret Manager) |
+| `STRIPE_SECRET_KEY` | Stripe secret key | `sk_test_...` or `sk_live_...` (from Secret Manager) |
+| `MCP_SERVER_URL` | Public MCP server URL | `https://mcp.yourdomain.com` |
+| `NEXT_PUBLIC_SITE_URL` | Frontend URL | `https://your-frontend.vercel.app` |
+
+### Optional
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DEMO_MODE` | Enable demo mode (mock responses) | `false` |
+| `DEV_UI_ENABLED` | Enable developer UI | `true` |
+| `PORT` | Server port | `8080` |
+| `HTTPS_PORT` | HTTPS port (local dev) | `8443` |
+
+## 🛡️ Additional Security Measures
+
+1. **Use HTTPS everywhere** - All endpoints should use HTTPS
+2. **Validate input** - Use Zod schemas for all user input
+3. **Rate limiting** - Consider adding rate limiting for production
+4. **CORS** - Strict CORS configuration (already implemented)
+5. **Security headers** - Helmet.js configured (already implemented)
+6. **Regular updates** - Keep dependencies updated
+7. **Secret rotation** - Rotate API keys regularly
+8. **Audit logs** - Monitor access logs for suspicious activity
+
+## 📚 Resources
+
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [GitHub Security Best Practices](https://docs.github.com/en/code-security)
+- [Google Cloud Secret Manager](https://cloud.google.com/secret-manager)
+- [Stripe Security Guide](https://stripe.com/docs/security)
+- [Shopify Security Best Practices](https://shopify.dev/docs/apps/best-practices/security)
+
