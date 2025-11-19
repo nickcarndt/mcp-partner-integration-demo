@@ -12,7 +12,6 @@ This document outlines security practices for the MCP HTTP Server project.
 - Secret keys
 - Passwords
 - Private keys or certificates
-- Cloudflare tunnel credentials
 - Any `.env` files (except `.env.example`)
 
 ### Protected Files
@@ -21,7 +20,6 @@ The following files are automatically ignored by `.gitignore`:
 - `.env` - Local environment variables
 - `.env.local` - Local overrides
 - `*.pem`, `*.key`, `*.crt` - Certificates and keys
-- `.cloudflared/credentials.json` - Cloudflare tunnel credentials
 - `secrets/` - Any secrets directory
 - `credentials.json` - Credential files
 
@@ -38,24 +36,21 @@ STRIPE_SECRET_KEY=sk_test_...
 
 ### Production Deployment
 
-For production deployments, use secure secret management:
+For production deployments on Vercel, use secure secret management:
 
-**Google Cloud Run:**
-- Use Google Secret Manager for sensitive values
-- Pass secrets via `--set-secrets` flag (not `--set-env-vars`)
-- Never hardcode secrets in deployment scripts
+**Vercel:**
+- Use Vercel Environment Variables in the dashboard
+- Set variables for Production, Preview, and Development environments
+- Never hardcode secrets in code or commit them to git
 
 **Example:**
 ```bash
-# ✅ GOOD - Use Secret Manager
-gcloud run deploy mcp-server \
-  --set-secrets "STRIPE_SECRET_KEY=stripe-secret-key:latest" \
-  ...
+# ✅ GOOD - Set in Vercel dashboard
+# Go to Settings → Environment Variables
+# Add: SHOPIFY_STORE_URL, SHOPIFY_ACCESS_TOKEN, STRIPE_SECRET_KEY
 
-# ❌ BAD - Don't pass secrets directly
-gcloud run deploy mcp-server \
-  --set-env-vars "STRIPE_SECRET_KEY=sk_test_..." \
-  ...
+# ❌ BAD - Don't commit secrets
+# Never commit .env files or hardcode secrets
 ```
 
 ## 🔍 Security Checklist
@@ -68,7 +63,6 @@ Before committing code, verify:
 - [ ] `.gitignore` includes all sensitive file patterns
 - [ ] Documentation uses placeholder values only
 - [ ] No secrets in deployment scripts
-- [ ] Cloudflare tunnel credentials are ignored
 
 ## 🚨 If Secrets Are Exposed
 
@@ -111,9 +105,9 @@ If you accidentally commit secrets:
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `SHOPIFY_STORE_URL` | Shopify store domain | `your-store.myshopify.com` |
-| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | `shpat_...` (from Secret Manager) |
-| `STRIPE_SECRET_KEY` | Stripe secret key | `sk_test_...` or `sk_live_...` (from Secret Manager) |
-| `MCP_SERVER_URL` | Public MCP server URL | `https://mcp.yourdomain.com` |
+| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | `shpat_...` |
+| `STRIPE_SECRET_KEY` | Stripe secret key | `sk_test_...` or `sk_live_...` |
+| `MCP_SERVER_URL` | Public MCP server URL | `https://your-deployment.vercel.app` |
 | `NEXT_PUBLIC_SITE_URL` | Frontend URL | `https://your-frontend.vercel.app` |
 
 ### Optional
@@ -121,17 +115,15 @@ If you accidentally commit secrets:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DEMO_MODE` | Enable demo mode (mock responses) | `false` |
-| `DEV_UI_ENABLED` | Enable developer UI | `true` |
-| `PORT` | Server port | `8080` |
-| `HTTPS_PORT` | HTTPS port (local dev) | `8443` |
+| `ALLOWED_ORIGINS` | Comma-separated CORS origins | `https://chat.openai.com,https://chatgpt.com` |
 
 ## 🛡️ Additional Security Measures
 
-1. **Use HTTPS everywhere** - All endpoints should use HTTPS
+1. **Use HTTPS everywhere** - All endpoints should use HTTPS (Vercel provides this automatically)
 2. **Validate input** - Use Zod schemas for all user input
 3. **Rate limiting** - Consider adding rate limiting for production
 4. **CORS** - Strict CORS configuration (already implemented)
-5. **Security headers** - Helmet.js configured (already implemented)
+5. **Security headers** - Proper headers configured (already implemented)
 6. **Regular updates** - Keep dependencies updated
 7. **Secret rotation** - Rotate API keys regularly
 8. **Audit logs** - Monitor access logs for suspicious activity
@@ -140,7 +132,6 @@ If you accidentally commit secrets:
 
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [GitHub Security Best Practices](https://docs.github.com/en/code-security)
-- [Google Cloud Secret Manager](https://cloud.google.com/secret-manager)
+- [Vercel Environment Variables](https://vercel.com/docs/concepts/projects/environment-variables)
 - [Stripe Security Guide](https://stripe.com/docs/security)
 - [Shopify Security Best Practices](https://shopify.dev/docs/apps/best-practices/security)
-

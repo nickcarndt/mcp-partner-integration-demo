@@ -1,22 +1,13 @@
 {
   "name": "mcp-http-server",
   "version": "0.1.1",
-  "description": "MCP HTTP Server with multi-agent workflow support",
+  "description": "MCP HTTP Server for Vercel deployment",
   "type": "module",
-  "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc -p .",
-    "start": "node dist/server.js",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc -p . --noEmit",
-    "test": "NODE_TLS_REJECT_UNAUTHORIZED=0 vitest run",
     "fmt": "prettier -w .",
-    "smoke": "node -e \"fetch('http://localhost:8080/healthz').then(r=>r.json()).then(x=>console.log(x))\"",
-    "release:notes": "node scripts/release-notes.js",
-    "frontend:dev": "cd frontend && npm run dev",
-    "frontend:build": "cd frontend && npm run build",
-    "frontend:start": "cd frontend && npm start"
+    "release:notes": "node scripts/release-notes.js"
   },
   "keywords": [
     "mcp",
