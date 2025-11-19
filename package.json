@@ -13,17 +13,26 @@
     "test": "NODE_TLS_REJECT_UNAUTHORIZED=0 vitest run",
     "fmt": "prettier -w .",
     "smoke": "node -e \"fetch('http://localhost:8080/healthz').then(r=>r.json()).then(x=>console.log(x))\"",
-    "release:notes": "node scripts/release-notes.js"
+    "release:notes": "node scripts/release-notes.js",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+    "frontend:start": "cd frontend && npm start"
   },
-  "keywords": ["mcp", "http", "server"],
+  "keywords": [
+    "mcp",
+    "http",
+    "server"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "express": "^4.18.2",
     "helmet": "^7.1.0",
     "pino": "^8.17.2",
     "pino-http": "^8.5.0",
+    "stripe": "^20.0.0",
     "uuid": "^9.0.1",
     "zod": "^3.22.4"
   },
@@ -41,4 +50,3 @@
     "vitest": "^1.1.0"
   }
 }
-

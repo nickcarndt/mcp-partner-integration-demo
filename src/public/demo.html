@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Note: We intentionally DO NOT use upgrade-insecure-requests because we need HTTP -->
-  <title>MCP HTTP Server Demo</title>
+  <title>Developer Sandbox - MCP HTTP Server</title>
   <style>
     * {
       margin: 0;
@@ -25,6 +25,34 @@
       border-radius: 12px;
       padding: 2rem;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .sandbox-banner {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      color: #856404;
+    }
+    .sandbox-banner h2 {
+      color: #856404;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .sandbox-banner p {
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .sandbox-banner code {
+      background: rgba(255, 193, 7, 0.2);
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      font-size: 0.85rem;
     }
     h1 {
       color: #667eea;
@@ -146,7 +174,14 @@
 </head>
 <body>
   <div class="container">
-    <h1>🚀 MCP HTTP Server Demo</h1>
+    <div class="sandbox-banner">
+      <h2>🔧 Developer Sandbox</h2>
+      <p>
+        This page is for testing MCP tools during development. ChatGPT connects to <code>/</code> and does not use this UI. 
+        This sandbox is client-side only and does not interfere with the MCP transport spec.
+      </p>
+    </div>
+    <h1>🚀 MCP HTTP Server</h1>
     <p class="subtitle">Test the MCP tools interactively</p>
     <p class="meta">
       Origin: <code id="origin-label">detecting...</code> • Mode: <code id="mode-label">detecting...</code>

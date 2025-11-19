@@ -1,0 +1,33 @@
+# This file specifies files that are *not* uploaded to Google Cloud
+# using gcloud. It follows the same syntax as .gitignore
+
+.gcloudignore
+.git
+.gitignore
+node_modules/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+coverage/
+dist/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+frontend/
+docs/
+*.md
+!README.md
+certs/
+cert/
+.prettierrc
+.eslintrc*
+vitest.config.ts
+vitest.setup.ts
+scripts/
+publish-to-github.sh
+setup.sh
+

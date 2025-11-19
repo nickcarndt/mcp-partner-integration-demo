@@ -94,7 +94,106 @@ The `setup.sh` script automatically falls back to OpenSSL if mkcert is not avail
 **Linux:**
 - Certificates are typically trusted automatically, or you may need to add to your system's trust store
 
-### Start the Server
+## 🚀 One-Command Deployment to Cloud Run
+
+Deploy the MCP HTTP Server to Google Cloud Run with a single command.
+
+### Prerequisites
+
+1. **Google Cloud Project**: `mcp-commerce-demo` (or update `PROJECT_ID` in `scripts/deploy.sh`)
+2. **Environment Variables**: Set the following before running the deployment script:
+
+```bash
+export SHOPIFY_STORE_URL="your-store.myshopify.com"
+export SHOPIFY_ACCESS_TOKEN="shpat_your_token"
+export STRIPE_SECRET_KEY="sk_test_your_key"
+export NEXT_PUBLIC_SITE_URL="https://your-vercel-app.vercel.app"  # Optional, can be set later
+```
+
+### Deploy
+
+Run the automated deployment script:
+
+```bash
+./scripts/deploy.sh
+```
+
+The script will:
+- ✅ Verify/install Google Cloud SDK
+- ✅ Authenticate with Google Cloud (interactive OAuth)
+- ✅ Enable required APIs (Cloud Run, Artifact Registry, Cloud Build)
+- ✅ Create Artifact Registry repository if needed
+- ✅ Build and push Docker image
+- ✅ Deploy to Cloud Run with production settings
+- ✅ Display your MCP server URL and manifest URL
+
+### Required Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `SHOPIFY_STORE_URL` | Your Shopify store domain | ✅ Yes |
+| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API access token | ✅ Yes |
+| `STRIPE_SECRET_KEY` | Stripe secret key (test or live) | ✅ Yes |
+| `NEXT_PUBLIC_SITE_URL` | Your Next.js frontend URL (Vercel) | ⚠️ Optional |
+
+**Note**: If `NEXT_PUBLIC_SITE_URL` is not set, Stripe checkout URLs will use localhost. You can update it later.
+
+### Update Environment Variables
+
+After deployment, update environment variables:
+
+```bash
+gcloud run services update mcp-server \
+  --region us-central1 \
+  --update-env-vars "NEXT_PUBLIC_SITE_URL=https://your-vercel-app.vercel.app"
+```
+
+### Redeploy
+
+To redeploy after code changes:
+
+```bash
+# Set environment variables (if not already in your shell)
+export SHOPIFY_STORE_URL="your-store.myshopify.com"
+export SHOPIFY_ACCESS_TOKEN="shpat_your_token"
+export STRIPE_SECRET_KEY="sk_test_your_key"
+export NEXT_PUBLIC_SITE_URL="https://your-vercel-app.vercel.app"
+
+# Run deployment
+./scripts/deploy.sh
+```
+
+### Cloud Build Alternative
+
+You can also trigger deployment via Cloud Build:
+
+```bash
+gcloud builds submit --config=cloudbuild.yaml . \
+  --substitutions=_SHOPIFY_STORE_URL="your-store.myshopify.com",_SHOPIFY_ACCESS_TOKEN="your-token",_STRIPE_SECRET_KEY="your-key",_NEXT_PUBLIC_SITE_URL="https://your-vercel-app.vercel.app"
+```
+
+### Verify Deployment
+
+After deployment, test your MCP server:
+
+```bash
+# Get your service URL
+SERVICE_URL=$(gcloud run services describe mcp-server --region us-central1 --format 'value(status.url)')
+
+# Test health endpoint
+curl ${SERVICE_URL}/healthz
+
+# Test MCP manifest
+curl ${SERVICE_URL}/mcp-manifest.json
+```
+
+### Connect ChatGPT
+
+1. Get your Cloud Run URL (displayed after deployment)
+2. In ChatGPT, add MCP server: `https://your-service-url.run.app`
+3. ChatGPT will automatically discover tools from `/mcp-manifest.json`
+
+### Start the Server (Local Development)
 
 ```bash
 npm run dev

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import http from 'node:http';
 import https from 'node:https';
@@ -10,7 +11,14 @@ import pino from 'pino';
 import pinoHttp from 'pino-http';
 import { z } from 'zod';
 import { searchProducts, SearchProductsParamsSchema } from './tools/shopify.js';
-import { createCheckoutSession, CreateCheckoutSessionParamsSchema } from './tools/stripe.js';
+import {
+  createCheckoutSession,
+  createCheckoutSessionLegacy,
+  getPaymentStatus,
+  CreateCheckoutSessionParamsSchema,
+  SimpleCheckoutSessionParamsSchema,
+  GetPaymentStatusParamsSchema,
+} from './tools/stripe.js';
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
 const HTTP_PORT = Number(process.env.HTTP_PORT || process.env.PORT || 8080);
@@ -56,6 +64,25 @@ const buildAllowedOriginsSet = (): Set<string> => {
   origins.add(`http://127.0.0.1:${HTTP_PORT}`);
   origins.add(`https://127.0.0.1:${HTTPS_PORT}`);
   
+  // Add ChatGPT origins for production
+  origins.add('https://chat.openai.com');
+  origins.add('https://chatgpt.com');
+  
+  // Add Next.js frontend URL from env (for Vercel deployment)
+  const nextJsUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (nextJsUrl) {
+    try {
+      const url = new URL(nextJsUrl);
+      const normalized = `${url.protocol}//${url.host}`;
+      origins.add(normalized);
+    } catch {
+      // Invalid URL, skip
+    }
+  }
+  
+  // Add localhost:3000 for Next.js dev (common default)
+  origins.add('http://localhost:3000');
+  
   // Add origins from env
   const envOrigins = (process.env.ALLOWED_ORIGINS || '')
     .split(',')
@@ -78,6 +105,31 @@ const buildAllowedOriginsSet = (): Set<string> => {
 
 const ALLOWED_ORIGINS_SET = buildAllowedOriginsSet();
 const ALLOWED_ORIGINS = Array.from(ALLOWED_ORIGINS_SET);
+
+// SSE connection manager for MCP transport
+interface SSEClient {
+  id: string;
+  res: express.Response;
+  lastActivity: number;
+}
+
+const sseClients = new Map<string, SSEClient>();
+
+// Clean up stale SSE connections every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  const staleTimeout = 5 * 60 * 1000; // 5 minutes
+  for (const [id, client] of sseClients.entries()) {
+    if (now - client.lastActivity > staleTimeout) {
+      try {
+        client.res.end();
+      } catch {
+        // Connection already closed
+      }
+      sseClients.delete(id);
+    }
+  }
+}, 60000); // Check every minute
 
 // Logger
 const logger = pino({
@@ -123,6 +175,18 @@ const StripeResultSchema = z.object({
   cancelUrl: z.string(),
   createdAt: z.string(),
   idempotencyKey: z.string().optional(),
+});
+
+const SimpleCheckoutResultSchema = z.object({
+  checkout_url: z.string(),
+  session_id: z.string(),
+  payment_intent: z.string().nullable(),
+});
+
+const PaymentStatusResultSchema = z.object({
+  status: z.string(),
+  amount: z.number(),
+  currency: z.string(),
 });
 
 const HealthResponseSchema = z.object({
@@ -221,37 +285,25 @@ app.use((req: express.Request, res: express.Response, next: express.NextFunction
   next();
 });
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
+// SSE endpoint MUST be before body parser and static middleware for immediate response
+// Helper function to send SSE message with MCP transport spec format
+const sendSSEMessage = (res: express.Response, event: string, data: any) => {
+  const eventId = uuid();
+  const jsonData = JSON.stringify(data);
+  res.write(`id: ${eventId}\n`);
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${jsonData}\n\n`);
+};
 
-// Structured logging middleware
-app.use(
-  pinoHttp({
-    logger,
-    genReqId: (req: express.Request) => (req as any).cid || uuid(),
-  })
-);
-
-// Serve static files - use process.cwd() for development
-const publicPath = path.join(process.cwd(), 'src', 'public');
-app.use(express.static(publicPath));
-
-// Root route - serve demo.html with no-cache headers (dev mode)
-app.get('/', (_req, res) => {
-  const demoFile = path.join(process.cwd(), 'src', 'public', 'demo.html');
-  res.setHeader('Cache-Control', 'no-store');
-  res.sendFile(demoFile);
-});
-
-// MCP Manifest with cache headers and Zod validation
-app.get('/mcp-manifest.json', (_req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
-  const homepageUrl = `https://localhost:${HTTPS_PORT}`;
-  const payload = {
+// Helper function to get MCP manifest payload (needed for SSE init event)
+const getMCPManifestPayload = (req: express.Request) => {
+  const productionUrl = process.env.MCP_SERVER_URL || 
+    (req.headers.host ? `https://${req.headers.host}` : `https://localhost:${HTTPS_PORT}`);
+  return {
     name: 'partner-integration-demo',
     version: '0.1.1',
-    description: 'Demo MCP tools for partner integrations',
-    homepage: homepageUrl,
+    description: 'Production MCP tools for partner integrations (Shopify + Stripe)',
+    homepage: productionUrl,
     tools: [
       {
         name: 'ping',
@@ -265,19 +317,19 @@ app.get('/mcp-manifest.json', (_req, res) => {
       },
       {
         name: 'shopify.searchProducts',
-        description: 'Mock product search',
+        description: 'Search products in Shopify store',
         parameters: {
           type: 'object',
           required: ['query'],
           properties: {
-            query: { type: 'string' },
-            limit: { type: 'number', default: 10 },
+            query: { type: 'string', description: 'Search query (searches in product title, vendor, and type)' },
+            limit: { type: 'number', default: 10, description: 'Maximum number of products to return' },
           },
         },
       },
       {
         name: 'stripe.createCheckoutSession',
-        description: 'Mock Stripe Checkout Session',
+        description: 'Create Stripe Checkout Session (legacy API)',
         parameters: {
           type: 'object',
           required: ['items', 'successUrl', 'cancelUrl'],
@@ -297,11 +349,281 @@ app.get('/mcp-manifest.json', (_req, res) => {
           },
         },
       },
+      {
+        name: 'stripe_create_checkout_session',
+        description: 'Create Stripe checkout session with product name and price. Returns a checkout URL that redirects to Stripe payment page.',
+        parameters: {
+          type: 'object',
+          required: ['productName', 'price'],
+          properties: {
+            productName: { type: 'string', description: 'Name of the product being purchased' },
+            price: { type: 'number', description: 'Price in cents (e.g., 4999 for $49.99)' },
+            currency: { type: 'string', default: 'usd', description: 'Currency code (ISO 4217)' },
+          },
+        },
+      },
+      {
+        name: 'stripe_get_payment_status',
+        description: 'Get payment status for a payment intent. Returns status, amount, and currency.',
+        parameters: {
+          type: 'object',
+          required: ['paymentIntentId'],
+          properties: {
+            paymentIntentId: { type: 'string', description: 'Stripe payment intent ID' },
+          },
+        },
+      },
     ],
   };
+};
+
+// MCP SSE endpoint (Server-Sent Events transport) - MUST be before body parser
+app.get('/sse', (req, res) => {
+  const correlationId = (req as any).cid || uuid();
+  const connectionId = uuid();
+
+  // Set SSE headers per MCP transport spec - CRITICAL for ChatGPT compatibility
+  // ChatGPT MCP connector requires strict HTTP/2 + TLS 1.3 compliance
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx/proxy buffering
+  res.setHeader('Content-Encoding', 'identity'); // Required by ChatGPT MCP connector
+  // Note: Transfer-Encoding: chunked is NOT set - HTTP/2 handles framing automatically
+  // Setting it manually causes 502 errors with HTTP/2
+  
+  // Flush headers IMMEDIATELY - must come BEFORE sending any event
+  if (typeof (res as any).flushHeaders === 'function') {
+    (res as any).flushHeaders();
+  }
+
+  // Register this SSE client
+  const client: SSEClient = {
+    id: connectionId,
+    res,
+    lastActivity: Date.now(),
+  };
+  sseClients.set(connectionId, client);
+
+  logger.info({ correlationId, connectionId }, 'SSE connection established');
+
+  // Send init event with MCP manifest IMMEDIATELY after flushHeaders
+  // This must happen within 100ms for ChatGPT compatibility
+  const manifest = getMCPManifestPayload(req);
+  sendSSEMessage(res, 'mcp.init', manifest);
+  
+  // Force flush to ensure immediate transmission
+  if (typeof (res as any).flush === 'function') {
+    (res as any).flush();
+  }
+
+  // Handle client disconnect
+  req.on('close', () => {
+    logger.info({ correlationId, connectionId }, 'SSE connection closed');
+    sseClients.delete(connectionId);
+    res.end();
+  });
+
+  // Keep connection alive with periodic ping (MCP transport spec: mcp.ping)
+  const keepAliveInterval = setInterval(() => {
+    if (!sseClients.has(connectionId)) {
+      clearInterval(keepAliveInterval);
+      return;
+    }
+    try {
+      sendSSEMessage(res, 'mcp.ping', { timestamp: new Date().toISOString() });
+      client.lastActivity = Date.now();
+    } catch (err) {
+      clearInterval(keepAliveInterval);
+      sseClients.delete(connectionId);
+    }
+  }, 30000); // Send ping every 30 seconds
+
+  // Clean up interval on disconnect
+  req.on('close', () => {
+    clearInterval(keepAliveInterval);
+  });
+});
+
+// Body parsing (after SSE route to avoid buffering)
+app.use(express.json({ limit: '10mb' }));
+
+// Structured logging middleware (after SSE route)
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (req: express.Request) => (req as any).cid || uuid(),
+  })
+);
+
+// Helper function to return MCP discovery metadata
+const getMCPDiscoveryMetadata = (req: express.Request) => {
+  const productionUrl = process.env.MCP_SERVER_URL || 
+    (req.headers.host ? `https://${req.headers.host}` : `https://localhost:${HTTPS_PORT}`);
+  return {
+    mcp: true,
+    name: 'partner-integration-demo',
+    description: 'MCP server powering Shopify + Stripe',
+    manifest: '/mcp-manifest.json',
+    sse: '/sse', // SSE endpoint for MCP transport
+    homepage: productionUrl,
+  };
+};
+
+// Root route - return MCP metadata JSON (GET and POST)
+app.get('/', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(getMCPDiscoveryMetadata(req));
+});
+
+// Handle POST to root (ChatGPT connector sends POST during setup)
+app.post('/', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(getMCPDiscoveryMetadata(req));
+});
+
+// Developer Sandbox UI route (optional, controlled by DEV_UI_ENABLED)
+app.get('/ui', (_req, res) => {
+  const devUIEnabled = process.env.DEV_UI_ENABLED === 'true';
+  if (!devUIEnabled) {
+    res.status(404).json({
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Developer Sandbox UI is disabled. Set DEV_UI_ENABLED=true to enable.',
+      },
+    });
+    return;
+  }
+  const demoFile = path.join(process.cwd(), 'src', 'public', 'demo.html');
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(demoFile);
+});
+
+// Serve static files - use process.cwd() for development (after routes to avoid conflicts)
+const publicPath = path.join(process.cwd(), 'src', 'public');
+app.use(express.static(publicPath));
+
+// Handle favicon and icon requests to avoid 404s (browsers/clients probe for these)
+app.get('/favicon.ico', (_req, res) => {
+  res.status(204).end(); // No Content
+});
+app.get('/favicon.png', (_req, res) => {
+  res.status(204).end(); // No Content
+});
+app.get('/favicon.svg', (_req, res) => {
+  res.status(204).end(); // No Content
+});
+app.get('/apple-touch-icon.png', (_req, res) => {
+  res.status(204).end(); // No Content
+});
+app.get('/apple-touch-icon-precomposed.png', (_req, res) => {
+  res.status(204).end(); // No Content
+});
+
+// Pre-compute manifest payload to avoid computation on every request
+let cachedManifest: any = null;
+const getCachedManifest = (req: express.Request) => {
+  if (cachedManifest) {
+    // Update homepage URL if needed (in case host changes)
+    const productionUrl = process.env.MCP_SERVER_URL || 
+      (req.headers.host ? `https://${req.headers.host}` : `https://localhost:${HTTPS_PORT}`);
+    return { ...cachedManifest, homepage: productionUrl };
+  }
+  return null;
+};
+
+// MCP Manifest with cache headers and Zod validation
+app.get('/mcp-manifest.json', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  // Use production URL from env, or construct from request, or fallback to localhost
+  const productionUrl = process.env.MCP_SERVER_URL || 
+    (req.headers.host ? `https://${req.headers.host}` : `https://localhost:${HTTPS_PORT}`);
+  const payload = {
+    name: 'partner-integration-demo',
+    version: '0.1.1',
+    description: 'Production MCP tools for partner integrations (Shopify + Stripe)',
+    homepage: productionUrl,
+    tools: [
+      {
+        name: 'ping',
+        description: 'Connectivity test',
+        parameters: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+          },
+        },
+      },
+      {
+        name: 'shopify.searchProducts',
+        description: 'Search products in Shopify store',
+        parameters: {
+          type: 'object',
+          required: ['query'],
+          properties: {
+            query: { type: 'string', description: 'Search query (searches in product title, vendor, and type)' },
+            limit: { type: 'number', default: 10, description: 'Maximum number of products to return' },
+          },
+        },
+      },
+      {
+        name: 'stripe.createCheckoutSession',
+        description: 'Create Stripe Checkout Session (legacy API)',
+        parameters: {
+          type: 'object',
+          required: ['items', 'successUrl', 'cancelUrl'],
+          properties: {
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  priceId: { type: 'string' },
+                  quantity: { type: 'number' },
+                },
+              },
+            },
+            successUrl: { type: 'string' },
+            cancelUrl: { type: 'string' },
+          },
+        },
+      },
+      {
+        name: 'stripe_create_checkout_session',
+        description: 'Create Stripe checkout session with product name and price. Returns a checkout URL that redirects to Stripe payment page.',
+        parameters: {
+          type: 'object',
+          required: ['productName', 'price'],
+          properties: {
+            productName: { type: 'string', description: 'Name of the product being purchased' },
+            price: { type: 'number', description: 'Price in cents (e.g., 4999 for $49.99)' },
+            currency: { type: 'string', default: 'usd', description: 'Currency code (ISO 4217)' },
+          },
+        },
+      },
+      {
+        name: 'stripe_get_payment_status',
+        description: 'Get payment status for a payment intent. Returns status, amount, and currency.',
+        parameters: {
+          type: 'object',
+          required: ['paymentIntentId'],
+          properties: {
+            paymentIntentId: { type: 'string', description: 'Stripe payment intent ID' },
+          },
+        },
+      },
+    ],
+  };
+  
+  // Cache the manifest (without homepage which may vary)
+  if (!cachedManifest) {
+    cachedManifest = { ...payload };
+  }
+  
   const validated = MCPManifestSchema.parse(payload);
   res.json(validated);
 });
+
 
 // Health check
 app.get('/healthz', (_req, res) => {
@@ -354,7 +676,7 @@ app.get('/tools', (_req, res) => {
       },
       {
         name: 'stripe.createCheckoutSession',
-        description: 'Create Stripe checkout session (mock)',
+        description: 'Create Stripe checkout session (legacy API)',
         inputSchema: {
           type: 'object',
           required: ['items', 'successUrl', 'cancelUrl'],
@@ -374,16 +696,90 @@ app.get('/tools', (_req, res) => {
           },
         },
       },
+      {
+        name: 'stripe_create_checkout_session',
+        description: 'Create Stripe checkout session with product name and price',
+        inputSchema: {
+          type: 'object',
+          required: ['productName', 'price'],
+          properties: {
+            productName: { type: 'string' },
+            price: { type: 'number' },
+            currency: { type: 'string', default: 'usd' },
+          },
+        },
+      },
+      {
+        name: 'stripe_get_payment_status',
+        description: 'Get payment status for a payment intent',
+        inputSchema: {
+          type: 'object',
+          required: ['paymentIntentId'],
+          properties: {
+            paymentIntentId: { type: 'string' },
+          },
+        },
+      },
     ],
   };
   const validated = ListToolsResponseSchema.parse(payload);
   res.json(validated);
 });
 
+// Helper function to send tool response (either JSON or SSE)
+const sendToolResponse = (
+  res: express.Response,
+  correlationId: string,
+  toolName: string,
+  result: any,
+  sseConnectionId?: string,
+  error?: any
+) => {
+  // If SSE connection ID is provided and connection exists, stream via SSE
+  if (sseConnectionId) {
+    const sseClient = sseClients.get(sseConnectionId);
+    if (sseClient) {
+      sseClient.lastActivity = Date.now();
+      
+      if (error) {
+        // Send error event (MCP transport spec: mcp.error)
+        sendSSEMessage(sseClient.res, 'mcp.error', {
+          tool: toolName,
+          correlationId,
+          error: {
+            code: error.code || 'UNKNOWN_ERROR',
+            message: error.message || 'An error occurred',
+            details: error.details,
+          },
+        });
+      } else {
+        // Send tool response event (MCP transport spec: mcp.tool_response)
+        sendSSEMessage(sseClient.res, 'mcp.tool_response', {
+          tool: toolName,
+          correlationId,
+          result,
+        });
+      }
+      
+      // Return empty 202 Accepted for POST requests when using SSE
+      res.status(202).json({ ok: true, message: 'Response streamed via SSE' });
+      return;
+    }
+  }
+
+  // Default: return JSON response
+  if (error) {
+    res.status(error.status || 500).json(error);
+  } else {
+    res.json(result);
+  }
+};
+
 // Tool execution endpoint
 app.post('/tools/:toolName', async (req, res) => {
   const correlationId = (req as any).cid || uuid();
   const idempotencyKey = req.headers['x-idempotency-key'] as string | undefined;
+  const sseConnectionId = req.headers['x-sse-connection-id'] as string | undefined;
   const { toolName } = req.params;
 
   try {
@@ -397,7 +793,7 @@ app.post('/tools/:toolName', async (req, res) => {
           timestamp: new Date().toISOString(),
         };
         const validated = PingResultSchema.parse(payload);
-        res.json(validated);
+        sendToolResponse(res, correlationId, toolName, validated, sseConnectionId);
         return;
       }
 
@@ -405,15 +801,38 @@ app.post('/tools/:toolName', async (req, res) => {
         const params = SearchProductsParamsSchema.parse(req.body.params || {});
         const result = await searchProducts(params, DEMO_MODE);
         const validated = ShopifyResultSchema.parse(result);
-        res.json(validated);
+        sendToolResponse(res, correlationId, toolName, validated, sseConnectionId);
         return;
       }
 
       case 'stripe.createCheckoutSession': {
         const params = CreateCheckoutSessionParamsSchema.parse(req.body.params || {});
-        const result = await createCheckoutSession(params, DEMO_MODE, idempotencyKey);
+        const result = await createCheckoutSessionLegacy(params, DEMO_MODE, idempotencyKey);
         const validated = StripeResultSchema.parse(result);
-        res.json(validated);
+        sendToolResponse(res, correlationId, toolName, validated, sseConnectionId);
+        return;
+      }
+
+      case 'stripe_create_checkout_session': {
+        const params = SimpleCheckoutSessionParamsSchema.parse(req.body.params || {});
+        const result = await createCheckoutSession(
+          params.productName,
+          params.price,
+          params.currency,
+          DEMO_MODE,
+          params.successUrl,
+          params.cancelUrl
+        );
+        const validated = SimpleCheckoutResultSchema.parse(result);
+        sendToolResponse(res, correlationId, toolName, validated, sseConnectionId);
+        return;
+      }
+
+      case 'stripe_get_payment_status': {
+        const params = GetPaymentStatusParamsSchema.parse(req.body.params || {});
+        const result = await getPaymentStatus(params.paymentIntentId, DEMO_MODE);
+        const validated = PaymentStatusResultSchema.parse(result);
+        sendToolResponse(res, correlationId, toolName, validated, sseConnectionId);
         return;
       }
 
@@ -425,34 +844,54 @@ app.post('/tools/:toolName', async (req, res) => {
     logger.error({ err: errInstance, correlationId, toolName }, 'Tool execution error');
 
     if (errInstance instanceof z.ZodError) {
-      res.status(400).json(
-        err('BAD_PARAMS', 'Invalid parameters', errInstance.errors.map((e) => e.message), correlationId)
-      );
+      const errorPayload = {
+        code: 'BAD_PARAMS',
+        message: 'Invalid parameters',
+        details: errInstance.errors.map((e) => e.message),
+        status: 400,
+      };
+      sendToolResponse(res, correlationId, toolName, null, sseConnectionId, errorPayload);
       return;
     }
 
     // Handle timeout errors
     if (errInstance.code === 'ECONNABORTED' || errInstance.message?.includes('timeout')) {
-      res.status(500).json(err('TIMEOUT', 'Request timeout', undefined, correlationId));
+      const errorPayload = {
+        code: 'TIMEOUT',
+        message: 'Request timeout',
+        status: 500,
+      };
+      sendToolResponse(res, correlationId, toolName, null, sseConnectionId, errorPayload);
       return;
     }
 
     // Handle upstream errors
     if (errInstance.statusCode >= 400 && errInstance.statusCode < 500) {
-      res.status(502).json(
-        err('UPSTREAM_4XX', `Upstream error: ${errInstance.message}`, undefined, correlationId)
-      );
+      const errorPayload = {
+        code: 'UPSTREAM_4XX',
+        message: `Upstream error: ${errInstance.message}`,
+        status: 502,
+      };
+      sendToolResponse(res, correlationId, toolName, null, sseConnectionId, errorPayload);
       return;
     }
 
     if (errInstance.statusCode >= 500) {
-      res.status(502).json(
-        err('UPSTREAM_5XX', `Upstream error: ${errInstance.message}`, undefined, correlationId)
-      );
+      const errorPayload = {
+        code: 'UPSTREAM_5XX',
+        message: `Upstream error: ${errInstance.message}`,
+        status: 502,
+      };
+      sendToolResponse(res, correlationId, toolName, null, sseConnectionId, errorPayload);
       return;
     }
 
-    res.status(500).json(err('INTERNAL_ERROR', errInstance.message || 'Internal server error', undefined, correlationId));
+    const errorPayload = {
+      code: 'INTERNAL_ERROR',
+      message: errInstance.message || 'Internal server error',
+      status: 500,
+    };
+    sendToolResponse(res, correlationId, toolName, null, sseConnectionId, errorPayload);
   }
 });
 
