@@ -3,7 +3,7 @@ import { ListToolsResponseSchema } from '../lib/schemas.js';
 import { handleOptionsRequest, setCorsHeaders } from '../lib/cors.js';
 
 export const config = {
-  runtime: 'nodejs22.x',
+  runtime: 'nodejs18.x',
 };
 
 /**
