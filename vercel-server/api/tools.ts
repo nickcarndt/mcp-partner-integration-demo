@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ListToolsResponseSchema } from '../lib/schemas';
-import { handleOptionsRequest, setCorsHeaders } from '../lib/cors';
+import { ListToolsResponseSchema } from '../lib/schemas.js';
+import { handleOptionsRequest, setCorsHeaders } from '../lib/cors.js';
 
 export const config = {
   runtime: 'nodejs22.x',
@@ -16,7 +16,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     const response = handleOptionsRequest(origin);
     if (response) {
-      response.headers.forEach((value, key) => {
+      response.headers.forEach((value: string, key: string) => {
         res.setHeader(key, value);
       });
       return res.status(response.status).end();
@@ -25,7 +25,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const headersObj: Record<string, string> = {};
-  setCorsHeaders(new Headers(), origin).forEach((value, key) => {
+  setCorsHeaders(new Headers(), origin).forEach((value: string, key: string) => {
     headersObj[key] = value;
   });
 

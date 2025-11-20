@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
 import { v4 as uuid } from 'uuid';
-import { DEMO_MODE, getCorrelationId, err } from '../lib/utils';
+import { DEMO_MODE, getCorrelationId, err } from '../lib/utils.js';
 import {
   PingParamsSchema,
   PingResultSchema,
@@ -9,8 +9,8 @@ import {
   StripeResultSchema,
   SimpleCheckoutResultSchema,
   PaymentStatusResultSchema,
-} from '../lib/schemas';
-import { searchProducts, SearchProductsParamsSchema } from '../lib/tools/shopify';
+} from '../lib/schemas.js';
+import { searchProducts, SearchProductsParamsSchema } from '../lib/tools/shopify.js';
 import {
   createCheckoutSession,
   createCheckoutSessionLegacy,
@@ -18,8 +18,8 @@ import {
   CreateCheckoutSessionParamsSchema,
   SimpleCheckoutSessionParamsSchema,
   GetPaymentStatusParamsSchema,
-} from '../lib/tools/stripe';
-import { handleOptionsRequest, setCorsHeaders } from '../lib/cors';
+} from '../lib/tools/stripe.js';
+import { handleOptionsRequest, setCorsHeaders } from '../lib/cors.js';
 
 export const config = {
   runtime: 'nodejs22.x',
