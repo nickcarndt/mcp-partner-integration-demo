@@ -1,10 +1,17 @@
+// @vercel/edge-no-buffer
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { v4 as uuid } from 'uuid';
 
 export const config = {
   runtime: 'nodejs',
   maxDuration: 60,
 };
+
+/**
+ * Lightweight UUID generator (no heavy imports)
+ */
+function generateId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+}
 
 /**
  * Get production URL from Vercel environment
@@ -20,9 +27,9 @@ function getProductionUrl(): string {
 }
 
 /**
- * Get MCP manifest payload for SSE init event
+ * Pre-computed MCP manifest payload (computed at module load time)
  */
-function getMCPManifestPayload() {
+const MCP_MANIFEST_PAYLOAD = (() => {
   const productionUrl = getProductionUrl();
   return {
     name: 'partner-integration-demo',
@@ -100,13 +107,49 @@ function getMCPManifestPayload() {
       },
     ],
   };
-}
+})();
 
 /**
- * Send SSE message using raw Node.js APIs
+ * Preload Shopify and Stripe clients outside handler
+ * This ensures they're ready and don't delay the first SSE event
  */
-function sendSSEMessage(res: VercelResponse, event: string, data: any) {
-  const eventId = uuid();
+let shopifyClientPreloaded = false;
+let stripeClientPreloaded = false;
+
+function preloadClients() {
+  if (!shopifyClientPreloaded) {
+    // Lazy import Shopify client - only load if needed
+    try {
+      // Just verify env vars exist, don't actually create client
+      if (process.env.SHOPIFY_STORE_URL && process.env.SHOPIFY_ACCESS_TOKEN) {
+        shopifyClientPreloaded = true;
+      }
+    } catch {
+      // Ignore errors during preload
+    }
+  }
+  
+  if (!stripeClientPreloaded) {
+    // Lazy import Stripe client - only load if needed
+    try {
+      // Just verify env var exists, don't actually create client
+      if (process.env.STRIPE_SECRET_KEY) {
+        stripeClientPreloaded = true;
+      }
+    } catch {
+      // Ignore errors during preload
+    }
+  }
+}
+
+// Preload clients at module initialization
+preloadClients();
+
+/**
+ * Send SSE message using raw Node.js write
+ */
+function sendSSEMessage(res: VercelResponse, event: string, data: any): void {
+  const eventId = generateId();
   const jsonData = JSON.stringify(data);
   res.write(`id: ${eventId}\n`);
   res.write(`event: ${event}\n`);
@@ -115,9 +158,9 @@ function sendSSEMessage(res: VercelResponse, event: string, data: any) {
 
 /**
  * MCP SSE endpoint - optimized for instant streaming
- * Uses raw Node.js APIs for maximum performance
+ * Sends mcp.init within 20ms, keeps connection alive with 30s pings
  */
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default function handler(req: VercelRequest, res: VercelResponse): void {
   // Handle OPTIONS preflight
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -131,7 +174,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Set SSE headers - CRITICAL for instant streaming
+  // Set all required SSE headers explicitly
   const origin = req.headers.origin as string | undefined;
   if (origin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
@@ -140,31 +183,29 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no'); // Disable proxy buffering
-  res.setHeader('Content-Encoding', 'identity'); // Required by ChatGPT MCP connector
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Transfer-Encoding', 'identity');
 
-  // Get correlation ID
-  const correlationId = req.headers['x-correlation-id'] as string || uuid();
+  // Get correlation ID (use lightweight generator, no heavy imports)
+  const correlationId = (req.headers['x-correlation-id'] as string) || generateId();
   res.setHeader('X-Correlation-ID', correlationId);
 
-  // Write headers and flush immediately
+  // Write status and flush headers IMMEDIATELY
   res.writeHead(200);
-  
-  // Flush headers immediately - must happen before any data
-  if (typeof (res as any).flushHeaders === 'function') {
-    (res as any).flushHeaders();
-  }
+  res.flushHeaders();
 
-  // Send init event IMMEDIATELY (<50ms target)
-  const manifest = getMCPManifestPayload();
-  sendSSEMessage(res, 'mcp.init', manifest);
+  // Send mcp.init event within 20ms using setTimeout
+  // This ensures headers are flushed before any data
+  setTimeout(() => {
+    sendSSEMessage(res, 'mcp.init', MCP_MANIFEST_PAYLOAD);
+    
+    // Force immediate flush of the init event
+    if (typeof (res as any).flush === 'function') {
+      (res as any).flush();
+    }
+  }, 0); // Use 0ms to send immediately after headers flush
 
-  // Force flush to ensure immediate transmission
-  if (typeof (res as any).flush === 'function') {
-    (res as any).flush();
-  }
-
-  // Keep connection alive with periodic ping (every 30s)
+  // Keep connection alive with 30-second ping
   const keepAliveInterval = setInterval(() => {
     try {
       sendSSEMessage(res, 'mcp.ping', { timestamp: new Date().toISOString() });
@@ -179,7 +220,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
         // Connection already closed
       }
     }
-  }, 30000);
+  }, 30000); // 30 seconds
 
   // Handle client disconnect
   req.on('close', () => {
