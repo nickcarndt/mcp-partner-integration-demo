@@ -1,13 +1,13 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/", "destination": "/api/index.ts" },
-    { "source": "/healthz", "destination": "/api/healthz.ts" },
-    { "source": "/healthz/ready", "destination": "/api/healthz/ready.ts" },
-    { "source": "/mcp-manifest.json", "destination": "/api/mcp-manifest.ts" },
-    { "source": "/sse", "destination": "/api/sse.ts" },
-    { "source": "/tools", "destination": "/api/tools.ts" },
-    { "source": "/tools/:toolName", "destination": "/api/tools/[toolName].ts" }
+    { "source": "/", "destination": "/api/index" },
+    { "source": "/healthz", "destination": "/api/healthz" },
+    { "source": "/healthz/ready", "destination": "/api/healthz/ready" },
+    { "source": "/mcp-manifest.json", "destination": "/api/mcp-manifest" },
+    { "source": "/sse", "destination": "/api/sse" },
+    { "source": "/tools", "destination": "/api/tools" },
+    { "source": "/tools/:toolName", "destination": "/api/tools/:toolName" }
   ],
   "headers": [
     {
