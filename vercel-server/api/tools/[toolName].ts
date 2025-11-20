@@ -22,7 +22,7 @@ import {
 import { handleOptionsRequest, setCorsHeaders } from '../../lib/cors.js';
 
 export const config = {
-  runtime: 'nodejs18.x',
+  runtime: 'nodejs22.x',
 };
 
 /**

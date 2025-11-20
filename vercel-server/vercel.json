@@ -2,11 +2,11 @@
   "version": 2,
   "functions": {
     "api/sse.ts": {
-      "runtime": "@vercel/node@3.0.0",
+      "runtime": "nodejs22.x",
       "maxDuration": 60
     },
     "api/**/*.ts": {
-      "runtime": "@vercel/node@3.0.0"
+      "runtime": "nodejs22.x"
     }
   },
   "rewrites": [
