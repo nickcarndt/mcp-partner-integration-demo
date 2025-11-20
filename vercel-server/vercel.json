@@ -20,7 +20,7 @@
     { "src": "/mcp-manifest.json", "dest": "/api/mcp-manifest.ts" },
     { "src": "/sse", "dest": "/api/sse.ts" },
     { "src": "/tools", "dest": "/api/tools.ts" },
-    { "src": "/tools/(.*)", "dest": "/api/tools/$1.ts" }
+    { "src": "/tools/(.*)", "dest": "/api/tools/[toolName].ts?toolName=$1" }
   ],
   "headers": [
     {
