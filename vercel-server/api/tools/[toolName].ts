@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
 import { v4 as uuid } from 'uuid';
-import { DEMO_MODE, getCorrelationId, err } from '../lib/utils.js';
+import { DEMO_MODE, getCorrelationId, err } from '../lib/utils';
 import {
   PingParamsSchema,
   PingResultSchema,
@@ -9,8 +9,8 @@ import {
   StripeResultSchema,
   SimpleCheckoutResultSchema,
   PaymentStatusResultSchema,
-} from '../lib/schemas.js';
-import { searchProducts, SearchProductsParamsSchema } from '../lib/tools/shopify.js';
+} from '../lib/schemas';
+import { searchProducts, SearchProductsParamsSchema } from '../lib/tools/shopify';
 import {
   createCheckoutSession,
   createCheckoutSessionLegacy,
@@ -18,8 +18,8 @@ import {
   CreateCheckoutSessionParamsSchema,
   SimpleCheckoutSessionParamsSchema,
   GetPaymentStatusParamsSchema,
-} from '../lib/tools/stripe.js';
-import { handleOptionsRequest, setCorsHeaders } from '../lib/cors.js';
+} from '../lib/tools/stripe';
+import { handleOptionsRequest, setCorsHeaders } from '../lib/cors';
 
 export const config = {
   runtime: 'nodejs22.x',
@@ -35,7 +35,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     const response = handleOptionsRequest(origin);
     if (response) {
-      return res.status(response.status).set(response.headers as any).end();
+      response.headers.forEach((value: string, key: string) => {
+        res.setHeader(key, value);
+      });
+      return res.status(response.status).end();
     }
     return res.status(403).end();
   }
@@ -46,8 +49,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const headersObj: Record<string, string> = {};
-  setCorsHeaders(new Headers(), origin).forEach((value, key) => {
+  setCorsHeaders(new Headers(), origin).forEach((value: string, key: string) => {
     headersObj[key] = value;
+  });
+
+  // Set headers
+  Object.entries(headersObj).forEach(([key, value]) => {
+    res.setHeader(key, value);
   });
 
   const correlationId = getCorrelationId(req.headers);
@@ -68,21 +76,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           timestamp: new Date().toISOString(),
         };
         const validated = PingResultSchema.parse(payload);
-        return res.status(200).set(headersObj).json(validated);
+        return res.status(200).json(validated);
       }
 
       case 'shopify.searchProducts': {
         const params = SearchProductsParamsSchema.parse(req.body?.params || {});
         const result = await searchProducts(params, DEMO_MODE);
         const validated = ShopifyResultSchema.parse(result);
-        return res.status(200).set(headersObj).json(validated);
+        return res.status(200).json(validated);
       }
 
       case 'stripe.createCheckoutSession': {
         const params = CreateCheckoutSessionParamsSchema.parse(req.body?.params || {});
         const result = await createCheckoutSessionLegacy(params, DEMO_MODE, idempotencyKey);
         const validated = StripeResultSchema.parse(result);
-        return res.status(200).set(headersObj).json(validated);
+        return res.status(200).json(validated);
       }
 
       case 'stripe_create_checkout_session': {
@@ -96,18 +104,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           params.cancelUrl
         );
         const validated = SimpleCheckoutResultSchema.parse(result);
-        return res.status(200).set(headersObj).json(validated);
+        return res.status(200).json(validated);
       }
 
       case 'stripe_get_payment_status': {
         const params = GetPaymentStatusParamsSchema.parse(req.body?.params || {});
         const result = await getPaymentStatus(params.paymentIntentId, DEMO_MODE);
         const validated = PaymentStatusResultSchema.parse(result);
-        return res.status(200).set(headersObj).json(validated);
+        return res.status(200).json(validated);
       }
 
       default:
-        return res.status(404).set(headersObj).json(err('UNKNOWN_TOOL', `Tool not found: ${toolName}`, undefined, correlationId));
+        return res.status(404).json(err('UNKNOWN_TOOL', `Tool not found: ${toolName}`, undefined, correlationId));
     }
   } catch (errInstance: any) {
     console.error({ err: errInstance, correlationId, toolName }, 'Tool execution error');
@@ -119,7 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         details: errInstance.errors.map((e) => e.message),
         status: 400,
       };
-      return res.status(400).set(headersObj).json({
+      return res.status(400).json({
         ok: false,
         error: {
           ...errorPayload,
@@ -135,7 +143,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         message: 'Request timeout',
         status: 500,
       };
-      return res.status(500).set(headersObj).json({
+      return res.status(500).json({
         ok: false,
         error: {
           ...errorPayload,
@@ -151,7 +159,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         message: `Upstream error: ${errInstance.message}`,
         status: 502,
       };
-      return res.status(502).set(headersObj).json({
+      return res.status(502).json({
         ok: false,
         error: {
           ...errorPayload,
@@ -166,7 +174,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         message: `Upstream error: ${errInstance.message}`,
         status: 502,
       };
-      return res.status(502).set(headersObj).json({
+      return res.status(502).json({
         ok: false,
         error: {
           ...errorPayload,
@@ -180,7 +188,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: errInstance.message || 'Internal server error',
       status: 500,
     };
-    return res.status(500).set(headersObj).json({
+    return res.status(500).json({
       ok: false,
       error: {
         ...errorPayload,

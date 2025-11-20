@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { DEMO_MODE } from '../lib/utils.js';
-import { HealthResponseSchema, ReadyResponseSchema } from '../lib/schemas.js';
-import { handleOptionsRequest, setCorsHeaders } from '../lib/cors.js';
+import { DEMO_MODE } from '../lib/utils';
+import { HealthResponseSchema, ReadyResponseSchema } from '../lib/schemas';
+import { handleOptionsRequest, setCorsHeaders } from '../lib/cors';
 
 export const config = {
   runtime: 'nodejs22.x',
@@ -17,7 +17,10 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     const response = handleOptionsRequest(origin);
     if (response) {
-      return res.status(response.status).set(response.headers as any).end();
+      response.headers.forEach((value, key) => {
+        res.setHeader(key, value);
+      });
+      return res.status(response.status).end();
     }
     return res.status(403).end();
   }
@@ -27,6 +30,11 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     headersObj[key] = value;
   });
 
+  // Set headers
+  Object.entries(headersObj).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
+
   // Check if this is a readiness probe
   if (req.url?.includes('/ready')) {
     const ready = {
@@ -34,7 +42,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       ready: true as const,
     };
     const validated = ReadyResponseSchema.parse(ready);
-    return res.status(200).set(headersObj).json(validated);
+    return res.status(200).json(validated);
   }
 
   // Regular health check
@@ -45,6 +53,6 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     demoMode: DEMO_MODE,
   };
   const validated = HealthResponseSchema.parse(health);
-  return res.status(200).set(headersObj).json(validated);
+  return res.status(200).json(validated);
 }
 

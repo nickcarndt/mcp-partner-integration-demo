@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ListToolsResponseSchema } from '../lib/schemas.js';
-import { handleOptionsRequest, setCorsHeaders } from '../lib/cors.js';
+import { ListToolsResponseSchema } from '../lib/schemas';
+import { handleOptionsRequest, setCorsHeaders } from '../lib/cors';
 
 export const config = {
   runtime: 'nodejs22.x',
@@ -16,7 +16,10 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     const response = handleOptionsRequest(origin);
     if (response) {
-      return res.status(response.status).set(response.headers as any).end();
+      response.headers.forEach((value, key) => {
+        res.setHeader(key, value);
+      });
+      return res.status(response.status).end();
     }
     return res.status(403).end();
   }
@@ -24,6 +27,11 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const headersObj: Record<string, string> = {};
   setCorsHeaders(new Headers(), origin).forEach((value, key) => {
     headersObj[key] = value;
+  });
+
+  // Set headers
+  Object.entries(headersObj).forEach(([key, value]) => {
+    res.setHeader(key, value);
   });
 
   const payload = {
@@ -99,6 +107,6 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     ],
   };
   const validated = ListToolsResponseSchema.parse(payload);
-  return res.status(200).set(headersObj).json(validated);
+  return res.status(200).json(validated);
 }
 

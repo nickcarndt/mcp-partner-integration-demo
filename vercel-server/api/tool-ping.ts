@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { v4 as uuid } from 'uuid';
-import { PingParamsSchema, PingResultSchema } from '../lib/schemas.js';
+import { PingParamsSchema, PingResultSchema } from '../lib/schemas';
 
 export const config = {
   runtime: 'nodejs22.x',
