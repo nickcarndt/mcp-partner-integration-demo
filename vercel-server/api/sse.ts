@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { v4 as uuid } from 'uuid';
 
 export const config = {
-  runtime: 'nodejs18.x',
+  runtime: 'nodejs22.x',
 };
 
 /**

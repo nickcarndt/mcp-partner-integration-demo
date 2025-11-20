@@ -6,7 +6,7 @@ import { ShopifyResultSchema } from '../lib/schemas.js';
 import { searchProducts, SearchProductsParamsSchema } from '../lib/tools/shopify.js';
 
 export const config = {
-  runtime: 'nodejs18.x',
+  runtime: 'nodejs22.x',
 };
 
 /**
