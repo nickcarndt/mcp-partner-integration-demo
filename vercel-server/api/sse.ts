@@ -1,5 +1,7 @@
 // @vercel/edge-no-buffer
+console.log("SSE handler started", Date.now());
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+console.log("Imports resolved");
 
 export const config = {
   runtime: 'nodejs',
@@ -161,8 +163,11 @@ function sendSSEMessage(res: VercelResponse, event: string, data: any): void {
  * Sends mcp.init within 20ms, keeps connection alive with 30s pings
  */
 export default function handler(req: VercelRequest, res: VercelResponse): void {
+  console.log("SSE handler invoked", Date.now(), "Method:", req.method, "URL:", req.url);
+  
   // Handle OPTIONS preflight
   if (req.method === 'OPTIONS') {
+    console.log("OPTIONS preflight request");
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -191,28 +196,42 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
   res.setHeader('X-Correlation-ID', correlationId);
 
   // Write status and flush headers IMMEDIATELY
+  const handlerStartTime = Date.now();
+  console.log("Handler function called", handlerStartTime);
+  
   res.writeHead(200);
   res.flushHeaders();
+  const headersFlushedTime = Date.now();
+  console.log("Headers flushed", headersFlushedTime, "Delay from handler start:", headersFlushedTime - handlerStartTime, "ms");
 
   // Send mcp.init event within 20ms using setTimeout
   // This ensures headers are flushed before any data
+  const beforeInitTime = Date.now();
+  console.log("Sending mcp.init", beforeInitTime, "Delay from handler start:", beforeInitTime - handlerStartTime, "ms");
+  
   setTimeout(() => {
+    const initSendTime = Date.now();
+    console.log("Inside setTimeout, sending mcp.init now", initSendTime, "Delay from handler start:", initSendTime - handlerStartTime, "ms");
     sendSSEMessage(res, 'mcp.init', MCP_MANIFEST_PAYLOAD);
     
     // Force immediate flush of the init event
     if (typeof (res as any).flush === 'function') {
       (res as any).flush();
     }
+    const initFlushedTime = Date.now();
+    console.log("mcp.init flushed", initFlushedTime, "Delay from handler start:", initFlushedTime - handlerStartTime, "ms");
   }, 0); // Use 0ms to send immediately after headers flush
 
   // Keep connection alive with 30-second ping
   const keepAliveInterval = setInterval(() => {
     try {
+      console.log("Ping sent", new Date().toISOString());
       sendSSEMessage(res, 'mcp.ping', { timestamp: new Date().toISOString() });
       if (typeof (res as any).flush === 'function') {
         (res as any).flush();
       }
     } catch (err) {
+      console.log("Ping error", err);
       clearInterval(keepAliveInterval);
       try {
         res.end();
