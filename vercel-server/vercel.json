@@ -13,14 +13,14 @@
       "runtime": "@vercel/node@3.0.0"
     }
   },
-  "routes": [
-    { "src": "/", "dest": "/api/index.ts" },
-    { "src": "/healthz", "dest": "/api/healthz.ts" },
-    { "src": "/healthz/ready", "dest": "/api/healthz/ready.ts" },
-    { "src": "/mcp-manifest.json", "dest": "/api/mcp-manifest.ts" },
-    { "src": "/sse", "dest": "/api/sse.ts" },
-    { "src": "/tools", "dest": "/api/tools.ts" },
-    { "src": "/tools/(.*)", "dest": "/api/tools/[toolName].ts" }
+  "rewrites": [
+    { "source": "/", "destination": "/api/index.ts" },
+    { "source": "/healthz", "destination": "/api/healthz.ts" },
+    { "source": "/healthz/ready", "destination": "/api/healthz/ready.ts" },
+    { "source": "/mcp-manifest.json", "destination": "/api/mcp-manifest.ts" },
+    { "source": "/sse", "destination": "/api/sse.ts" },
+    { "source": "/tools", "destination": "/api/tools.ts" },
+    { "source": "/tools/:toolName", "destination": "/api/tools/[toolName].ts" }
   ],
   "headers": [
     {
