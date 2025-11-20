@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid';
 
 export const config = {
   runtime: 'nodejs22.x',
+  maxDuration: 60,
 };
 
 /**
