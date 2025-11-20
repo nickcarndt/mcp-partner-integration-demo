@@ -53,3 +53,4 @@ cert/
 tmp/
 temp/
 *.tmp
+.vercel
