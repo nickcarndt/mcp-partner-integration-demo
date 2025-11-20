@@ -1,3 +1,40 @@
 {
-  "version": 2
+  "version": 2,
+  "buildCommand": null,
+  "outputDirectory": null,
+  "installCommand": null,
+  "framework": null,
+  "functions": {
+    "api/sse.ts": {
+      "runtime": "@vercel/node@3.0.0",
+      "maxDuration": 60
+    },
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@3.0.0"
+    }
+  },
+  "routes": [
+    { "src": "/", "dest": "/api/index.ts" },
+    { "src": "/healthz", "dest": "/api/healthz.ts" },
+    { "src": "/healthz/ready", "dest": "/api/healthz/ready.ts" },
+    { "src": "/mcp-manifest.json", "dest": "/api/mcp-manifest.ts" },
+    { "src": "/sse", "dest": "/api/sse.ts" },
+    { "src": "/tools", "dest": "/api/tools.ts" },
+    { "src": "/tools/(.*)", "dest": "/api/tools/$1.ts" }
+  ],
+  "headers": [
+    {
+      "source": "/sse",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-transform"
+        },
+        {
+          "key": "X-Accel-Buffering",
+          "value": "no"
+        }
+      ]
+    }
+  ]
 }
