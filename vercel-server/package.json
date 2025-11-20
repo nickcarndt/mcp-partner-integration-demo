@@ -3,6 +3,9 @@
   "version": "0.1.1",
   "description": "MCP HTTP Server for Vercel deployment",
   "type": "module",
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "dev": "vercel dev",
     "build": "tsc",
