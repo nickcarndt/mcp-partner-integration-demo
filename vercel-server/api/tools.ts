@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ListToolsResponseSchema } from '../lib/schemas';
-import { handleOptionsRequest, setCorsHeaders } from '../lib/cors';
+import { ListToolsResponseSchema } from '../lib/schemas.js';
+import { handleOptionsRequest, setCorsHeaders } from '../lib/cors.js';
 
 export const config = {
   runtime: 'nodejs22.x',

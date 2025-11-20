@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { MCPManifestSchema } from '../lib/schemas';
+import { MCPManifestSchema } from '../lib/schemas.js';
 
 export const config = {
   runtime: 'nodejs22.x',

@@ -1,4 +1,4 @@
-import { buildAllowedOriginsSet, isOriginAllowed } from './utils';
+import { buildAllowedOriginsSet, isOriginAllowed } from './utils.js';
 
 const ALLOWED_ORIGINS_SET = buildAllowedOriginsSet();
 

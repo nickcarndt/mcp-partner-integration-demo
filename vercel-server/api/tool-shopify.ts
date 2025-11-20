@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
 import { v4 as uuid } from 'uuid';
-import { DEMO_MODE } from '../lib/utils';
-import { ShopifyResultSchema } from '../lib/schemas';
-import { searchProducts, SearchProductsParamsSchema } from '../lib/tools/shopify';
+import { DEMO_MODE } from '../lib/utils.js';
+import { ShopifyResultSchema } from '../lib/schemas.js';
+import { searchProducts, SearchProductsParamsSchema } from '../lib/tools/shopify.js';
 
 export const config = {
   runtime: 'nodejs22.x',
