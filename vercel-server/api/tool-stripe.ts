@@ -17,7 +17,7 @@ import {
 } from '../lib/tools/stripe.js';
 
 export const config = {
-  runtime: 'nodejs22.x',
+  runtime: 'nodejs',
 };
 
 /**
