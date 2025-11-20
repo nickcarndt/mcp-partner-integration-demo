@@ -12,7 +12,11 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "types": ["node"],
-    "allowImportingTsExtensions": false
+    "allowImportingTsExtensions": false,
+    "baseUrl": ".",
+    "paths": {
+      "../lib/*": ["./lib/*"]
+    }
   },
   "include": ["api/**/*", "lib/**/*"],
   "exclude": ["node_modules", ".vercel"]
