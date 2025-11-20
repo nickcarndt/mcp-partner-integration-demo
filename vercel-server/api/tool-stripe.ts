@@ -1,12 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
 import { v4 as uuid } from 'uuid';
-import { DEMO_MODE } from '../lib/utils.js';
+import { DEMO_MODE } from '../lib/utils';
 import {
   StripeResultSchema,
   SimpleCheckoutResultSchema,
   PaymentStatusResultSchema,
-} from '../lib/schemas.js';
+} from '../lib/schemas';
 import {
   createCheckoutSession,
   createCheckoutSessionLegacy,
@@ -14,7 +14,7 @@ import {
   CreateCheckoutSessionParamsSchema,
   SimpleCheckoutSessionParamsSchema,
   GetPaymentStatusParamsSchema,
-} from '../lib/tools/stripe.js';
+} from '../lib/tools/stripe';
 
 export const config = {
   runtime: 'nodejs22.x',
