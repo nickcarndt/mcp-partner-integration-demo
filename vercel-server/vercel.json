@@ -1,13 +1,12 @@
 {
-  "version": 3,
-  "routes": [
-    { "src": "/", "dest": "/api/index" },
-    { "src": "/healthz", "dest": "/api/healthz" },
-    { "src": "/healthz/ready", "dest": "/api/healthz/ready" },
-    { "src": "/mcp-manifest.json", "dest": "/api/mcp-manifest" },
-    { "src": "/sse", "dest": "/api/sse" },
-    { "src": "/tools", "dest": "/api/tools" },
-    { "src": "/tools/:toolName", "dest": "/api/tools/:toolName" }
+  "version": 2,
+  "rewrites": [
+    { "source": "/", "destination": "/api/index" },
+    { "source": "/mcp-manifest.json", "destination": "/api/mcp-manifest" },
+    { "source": "/sse", "destination": "/api/sse" },
+    { "source": "/tool-ping", "destination": "/api/tool-ping" },
+    { "source": "/tool-shopify", "destination": "/api/tool-shopify" },
+    { "source": "/tool-stripe", "destination": "/api/tool-stripe" }
   ],
   "headers": [
     {
