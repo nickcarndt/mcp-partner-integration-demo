@@ -189,11 +189,15 @@ export default async function vercelHandler(req: VercelRequest, res: VercelRespo
     const wantsSse = (req.headers.accept as string | undefined)?.includes('text/event-stream');
 
     if (wantsSse) {
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
+      res.status(200);
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
       res.setHeader('Connection', 'keep-alive');
       res.write('event: ready\n');
       res.write('data: ok\n\n');
+      if (typeof (res as any).flush === 'function') {
+        (res as any).flush();
+      }
       return res.end();
     }
 
