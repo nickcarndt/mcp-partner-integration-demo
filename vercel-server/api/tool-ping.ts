@@ -4,6 +4,7 @@ import { PingParamsSchema, PingResultSchema } from '../lib/schemas.js';
 
 export const config = {
   runtime: 'nodejs',
+  maxDuration: 60,
 };
 
 /**

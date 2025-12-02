@@ -7,6 +7,7 @@ import { searchProducts, SearchProductsParamsSchema } from '../lib/tools/shopify
 
 export const config = {
   runtime: 'nodejs',
+  maxDuration: 60,
 };
 
 /**

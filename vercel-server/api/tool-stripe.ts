@@ -18,6 +18,7 @@ import {
 
 export const config = {
   runtime: 'nodejs',
+  maxDuration: 60,
 };
 
 /**

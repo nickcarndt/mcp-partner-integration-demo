@@ -4,6 +4,7 @@ import { handleOptionsRequest, setCorsHeaders } from '../../lib/cors.js';
 
 export const config = {
   runtime: 'nodejs',
+  maxDuration: 60,
 };
 
 /**

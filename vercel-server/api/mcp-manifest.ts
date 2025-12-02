@@ -3,6 +3,7 @@ import { MCPManifestSchema } from '../lib/schemas.js';
 
 export const config = {
   runtime: 'nodejs',
+  maxDuration: 60,
 };
 
 /**
