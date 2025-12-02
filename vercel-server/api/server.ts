@@ -17,6 +17,88 @@ export const config = {
   maxDuration: 300,
 };
 
+function buildManifest() {
+  return {
+    manifest: {
+      name: 'partner-integration-demo',
+      version: '0.1.1',
+      description: 'Production MCP tools for partner integrations (Shopify + Stripe)',
+      tools: [
+        {
+          name: 'ping',
+          description: 'A simple ping tool that returns a greeting message',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Name to greet' },
+            },
+          },
+        },
+        {
+          name: 'shopify_search_products',
+          description: 'Search for products in a Shopify store by query string',
+          inputSchema: {
+            type: 'object',
+            required: ['query'],
+            properties: {
+              query: { type: 'string', description: 'Search query (title/vendor/type)' },
+              limit: { type: 'number', default: 10, description: 'Maximum number of products to return' },
+            },
+          },
+        },
+        {
+          name: 'stripe_create_checkout_session',
+          description: 'Create a Stripe checkout session with a product name and price',
+          inputSchema: {
+            type: 'object',
+            required: ['productName', 'price'],
+            properties: {
+              productName: { type: 'string', description: 'Name of the product being purchased' },
+              price: { type: 'number', description: 'Price in cents (e.g., 4999 for $49.99)' },
+              currency: { type: 'string', default: 'usd', description: 'Currency code (ISO 4217)' },
+              successUrl: { type: 'string', description: 'Optional success URL override' },
+              cancelUrl: { type: 'string', description: 'Optional cancel URL override' },
+            },
+          },
+        },
+        {
+          name: 'stripe_create_checkout_session_legacy',
+          description: 'Create a Stripe checkout session using price IDs (legacy API)',
+          inputSchema: {
+            type: 'object',
+            required: ['items', 'successUrl', 'cancelUrl'],
+            properties: {
+              items: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    priceId: { type: 'string' },
+                    quantity: { type: 'number' },
+                  },
+                },
+              },
+              successUrl: { type: 'string' },
+              cancelUrl: { type: 'string' },
+            },
+          },
+        },
+        {
+          name: 'stripe_get_payment_status',
+          description: 'Get the payment status for a Stripe payment intent',
+          inputSchema: {
+            type: 'object',
+            required: ['paymentIntentId'],
+            properties: {
+              paymentIntentId: { type: 'string', description: 'Stripe payment intent ID' },
+            },
+          },
+        },
+      ],
+    },
+  };
+}
+
 // Create the MCP handler with SSE disabled (no Redis/KV configured)
 const handler = createMcpHandler(
   (server) => {
@@ -108,8 +190,16 @@ export default async function vercelHandler(req: VercelRequest, res: VercelRespo
     const raw = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
     try {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.method === 'manifest') {
-        parsed.method = 'get_manifest';
+      if (parsed && (parsed.method === 'manifest' || parsed.method === 'get_manifest')) {
+        const manifest = buildManifest();
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(200).send(
+          JSON.stringify({
+            jsonrpc: '2.0',
+            id: parsed.id ?? null,
+            result: manifest,
+          })
+        );
       }
       body = JSON.stringify(parsed);
     } catch {
