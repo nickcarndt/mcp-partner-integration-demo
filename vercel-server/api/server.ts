@@ -184,6 +184,12 @@ export default async function vercelHandler(req: VercelRequest, res: VercelRespo
   const host = req.headers.host || 'localhost';
   const url = new URL(req.url || '/', `${protocol}://${host}`);
 
+  // Lightweight health/exists check for GET / and GET /mcp
+  if (req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(200).send(JSON.stringify({ status: 'ok', mcp: true }));
+  }
+
   // Build request body and normalize legacy "manifest" method name to "get_manifest"
   let body: string | undefined;
   if (req.method !== 'GET' && req.method !== 'HEAD') {
