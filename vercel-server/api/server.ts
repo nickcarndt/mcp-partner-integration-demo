@@ -193,12 +193,13 @@ export default async function vercelHandler(req: VercelRequest, res: VercelRespo
       res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache, no-transform');
       res.setHeader('Connection', 'keep-alive');
-      res.write('event: ready\n');
-      res.write('data: ok\n\n');
+      res.write('event: mcp/server-ready\n');
+      res.write('data: {}\n\n');
       if (typeof (res as any).flush === 'function') {
         (res as any).flush();
       }
-      return res.end();
+      // Leave connection open - do not call res.end()
+      return;
     }
 
     res.setHeader('Content-Type', 'application/json');
