@@ -2,6 +2,7 @@
   "version": 2,
   "rewrites": [
     { "source": "/mcp", "destination": "/api/server" },
-    { "source": "/mcp-manifest.json", "destination": "/api/server" }
+    { "source": "/sse", "destination": "/api/server" },
+    { "source": "/message", "destination": "/api/server" }
   ]
 }

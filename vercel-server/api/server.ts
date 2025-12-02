@@ -18,7 +18,9 @@ export const config = {
 };
 
 // Create the MCP handler
-const mcpHandler = createMcpHandler((server) => {
+// Disable SSE since Redis is not configured and SSE requires Redis/KV
+const mcpHandler = createMcpHandler(
+  (server) => {
   // Ping tool - simple greeting
   server.tool(
     'ping',
@@ -95,7 +97,10 @@ const mcpHandler = createMcpHandler((server) => {
       };
     }
   );
-});
+  },
+  undefined, // serverOptions
+  { disableSse: true } // config - disable SSE since Redis is not configured
+);
 
 // Vercel handler wrapper to convert VercelRequest/VercelResponse to Web API format
 async function handler(req: VercelRequest, res: VercelResponse) {
