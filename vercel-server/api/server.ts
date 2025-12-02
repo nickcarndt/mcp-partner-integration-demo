@@ -186,6 +186,17 @@ export default async function vercelHandler(req: VercelRequest, res: VercelRespo
 
   // Lightweight health/exists check for GET / and GET /mcp
   if (req.method === 'GET') {
+    const wantsSse = (req.headers.accept as string | undefined)?.includes('text/event-stream');
+
+    if (wantsSse) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.write('event: ready\n');
+      res.write('data: ok\n\n');
+      return res.end();
+    }
+
     res.setHeader('Content-Type', 'application/json');
     return res.status(200).send(JSON.stringify({ status: 'ok', mcp: true }));
   }
