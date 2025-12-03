@@ -18,6 +18,8 @@ export const config = {
 
 // Create MCP handler with all tools registered
 // This handles JSON-RPC 2.0 protocol: initialize, tools/list, tools/call
+console.log('[MCP] REDIS_URL configured:', !!process.env.REDIS_URL);
+console.log('[MCP] REDIS_URL value:', process.env.REDIS_URL ? 'SET' : 'NOT SET');
 const handler = createMcpHandler(
   (server) => {
     server.tool(
