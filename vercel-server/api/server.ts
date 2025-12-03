@@ -101,28 +101,44 @@ const handler = createMcpHandler(
 
 // Export handlers for Vercel (Web API style)
 export async function GET(request: Request): Promise<Response> {
-  console.log('[MCP] GET request received:', request.url);
+  console.log('[MCP] GET request:', request.url);
+  console.log('[MCP] GET headers:', Object.fromEntries(request.headers.entries()));
   return handler(request);
 }
 
 export async function POST(request: Request): Promise<Response> {
-  console.log('[MCP] POST request received:', request.url);
-  console.log('[MCP] Headers:', Object.fromEntries(request.headers.entries()));
-  console.log('[MCP] Request method:', request.method);
-  console.log('[MCP] Request URL pathname:', new URL(request.url).pathname);
-  
-  try {
-    const response = await handler(request);
-    console.log('[MCP] Handler returned status:', response.status);
-    console.log('[MCP] Handler returned headers:', Object.fromEntries(response.headers.entries()));
-    return response;
-  } catch (error) {
-    console.error('[MCP] Handler error:', error);
-    throw error;
-  }
+  const body = await request.clone().text();
+  console.log('[MCP] POST request:', request.url);
+  console.log('[MCP] POST headers:', Object.fromEntries(request.headers.entries()));
+  console.log('[MCP] POST body:', body);
+  return handler(request);
 }
 
 export async function DELETE(request: Request): Promise<Response> {
-  console.log('[MCP] DELETE request received:', request.url);
+  console.log('[MCP] DELETE request:', request.url);
   return handler(request);
+}
+
+// Add OPTIONS for CORS preflight
+export async function OPTIONS(request: Request): Promise<Response> {
+  console.log('[MCP] OPTIONS request (CORS preflight):', request.url);
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Accept',
+    },
+  });
+}
+
+// Add catch-all for any other methods
+export async function PUT(request: Request): Promise<Response> {
+  console.log('[MCP] PUT request (unexpected):', request.url);
+  return new Response('Method not allowed', { status: 405 });
+}
+
+export async function PATCH(request: Request): Promise<Response> {
+  console.log('[MCP] PATCH request (unexpected):', request.url);
+  return new Response('Method not allowed', { status: 405 });
 }
