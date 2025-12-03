@@ -104,17 +104,18 @@ If you accidentally commit secrets:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `SHOPIFY_STORE_URL` | Shopify store domain | `your-store.myshopify.com` |
+| `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` | Shopify store domain/subdomain | `your-store.myshopify.com` |
 | `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | `shpat_...` |
 | `STRIPE_SECRET_KEY` | Stripe secret key | `sk_test_...` or `sk_live_...` |
-| `MCP_SERVER_URL` | Public MCP server URL | `https://your-deployment.vercel.app` |
+| `DEMO_MODE` | Enable demo mode (mock responses) | `false` |
+| `MCP_SERVER_URL` | Public MCP server URL override | `https://your-deployment.vercel.app` |
 | `NEXT_PUBLIC_SITE_URL` | Frontend URL | `https://your-frontend.vercel.app` |
 
 ### Optional
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DEMO_MODE` | Enable demo mode (mock responses) | `false` |
+| `SHOPIFY_API_VERSION` | Shopify API version | `2024-10` |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins | `https://chat.openai.com,https://chatgpt.com` |
 
 ## 🛡️ Additional Security Measures

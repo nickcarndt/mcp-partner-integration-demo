@@ -23,11 +23,12 @@ Before deploying, prepare your environment variables. You'll set these in the Ve
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `SHOPIFY_STORE_URL` | Shopify store domain | `your-store.myshopify.com` |
+| `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` | Shopify store domain/subdomain | `your-store.myshopify.com` |
 | `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | `shpat_...` |
+| `SHOPIFY_API_VERSION` | Shopify API version (optional) | `2024-10` |
 | `STRIPE_SECRET_KEY` | Stripe secret key | `sk_test_...` or `sk_live_...` |
 | `DEMO_MODE` | Enable demo mode | `false` (for production) |
-| `MCP_SERVER_URL` | MCP server URL | Set after deployment |
+| `MCP_SERVER_URL` | MCP server URL override | Set after deployment (optional) |
 | `NEXT_PUBLIC_SITE_URL` | Frontend URL | `https://your-frontend.vercel.app` |
 | `ALLOWED_ORIGINS` | CORS origins (optional) | `https://chat.openai.com,https://chatgpt.com` |
 
@@ -65,6 +66,7 @@ This will create a preview deployment and give you a URL like:
    DEMO_MODE=false
    MCP_SERVER_URL=https://mcp-http-server-abc123.vercel.app
    NEXT_PUBLIC_SITE_URL=https://your-frontend.vercel.app
+   ALLOWED_ORIGINS=https://chat.openai.com,https://chatgpt.com
    ```
 
    **Important:** Select **Production**, **Preview**, and **Development** for each variable.
@@ -109,19 +111,17 @@ Test the endpoints:
 
 ```bash
 # Health check
-curl https://your-deployment.vercel.app/healthz
+curl https://your-deployment.vercel.app/api/healthz
 
-# MCP manifest
-curl https://your-deployment.vercel.app/mcp-manifest.json
-
-# Root endpoint (MCP discovery)
-curl https://your-deployment.vercel.app/
+# MCP Streamable HTTP (tools/list)
+curl -X POST https://your-deployment.vercel.app/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tools/list","params":{}}'
 ```
 
 Expected responses:
-- `/healthz` should return `{"ok":true,"status":"ok",...}`
-- `/mcp-manifest.json` should return the MCP manifest
-- `/` should return MCP discovery metadata
+- `/api/healthz` should return `{"ok":true,"status":"ok",...}`
+- `/mcp` handles MCP JSON-RPC (`initialize`, `tools/list`, `tools/call`) via Streamable HTTP
 
 ## Step 8: Configure Custom Domain (Optional)
 
@@ -131,12 +131,6 @@ Expected responses:
 4. Update `MCP_SERVER_URL` environment variable with your custom domain
 
 ## Troubleshooting
-
-### SSE Endpoint Not Working
-
-- Ensure `vercel.json` has the correct runtime configuration
-- Check that headers are set correctly (no buffering)
-- Verify the function timeout is set to 60s for SSE
 
 ### CORS Errors
 
@@ -152,8 +146,8 @@ Expected responses:
 
 ### Function Timeout
 
-- SSE endpoint has a 60s timeout (configured in `vercel.json`)
-- Other endpoints use default timeout (10s)
+- MCP handler is configured for up to 300s (per `api/server.ts`)
+- Health checks use the default (short) timeout
 - For longer operations, consider increasing timeout in `vercel.json`
 
 ## Continuous Deployment
@@ -177,4 +171,3 @@ Monitor your deployment:
 2. Configure custom domain (if needed)
 3. Set up monitoring/alerts
 4. Update documentation with production URLs
-

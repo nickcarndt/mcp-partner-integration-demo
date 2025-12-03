@@ -58,19 +58,12 @@
 ## Files Modified
 
 ### README.md
-- ✅ Removed all Cloud Run deployment sections
-- ✅ Removed Docker references
-- ✅ Updated for Vercel deployment
-- ✅ Removed GCP-specific environment variables
-- ✅ Updated badges
-- ✅ Simplified project structure
-- ✅ Removed obsolete sections
+- ✅ Updated for Vercel MCP handler at `/mcp` (Streamable HTTP, SSE disabled)
+- ✅ Refreshed tool list, endpoints, and environment variables
+- ✅ Simplified project structure and badges
 
 ### SECURITY.md
-- ✅ Removed Google Cloud Run sections
-- ✅ Updated for Vercel deployment
-- ✅ Removed Cloudflare references
-- ✅ Updated environment variable examples
+- ✅ Trimmed to Vercel deployment context and current environment variables
 
 ### package.json
 - ✅ Removed Cloud Run scripts (`dev`, `build`, `start`, `test`, `smoke`)
@@ -84,12 +77,7 @@
 mcp-http-server/
 ├── vercel-server/              # Vercel deployment (main codebase)
 │   ├── api/                    # Serverless functions
-│   │   ├── index.ts           # Root route
-│   │   ├── sse.ts             # SSE endpoint
-│   │   ├── mcp-manifest.ts    # MCP manifest
-│   │   ├── tools.ts           # List tools
-│   │   ├── tools/
-│   │   │   └── [toolName].ts  # Dynamic tool execution
+│   │   ├── server.ts          # MCP handler (Streamable HTTP at /mcp -> /api/server)
 │   │   ├── healthz.ts         # Health check
 │   │   └── healthz/
 │   │       └── ready.ts       # Readiness probe
@@ -167,4 +155,3 @@ mcp-http-server/
 3. Set environment variables in Vercel dashboard
 4. Test all endpoints
 5. Add tests later if needed
-

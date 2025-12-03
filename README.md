@@ -1,57 +1,37 @@
 # MCP HTTP Server
 
-[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520-green?logo=node.js)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22.x-green?logo=node.js)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Deploy: Vercel](https://img.shields.io/badge/Deploy-Vercel-black.svg?logo=vercel)](https://vercel.com)
 [![Version](https://img.shields.io/badge/version-v0.1.1-green.svg)](CHANGELOG.md)
 
-A Model Context Protocol (MCP) HTTP server that exposes tools via REST endpoints for ChatGPT Apps and other MCP-compatible clients.
+A Vercel-hosted Model Context Protocol (MCP) server that exposes commerce tools over MCP's HTTP transport (Streamable HTTP, SSE disabled).
 
 ## What This Is
 
-A production-ready MCP server that provides:
-- **RESTful API** for exposing MCP tools to ChatGPT Apps
-- **Commerce integrations** (Shopify, Stripe) with demo mode support
-- **Security-first architecture** with input validation, error taxonomy, correlation IDs, and idempotency
-- **Production-ready patterns** including health probes, structured logging, and comprehensive error handling
-
-## Features
-
-- ✅ RESTful API for MCP tools
-- ✅ SSE endpoint for MCP transport (`/sse`)
-- ✅ Health check endpoint (`/healthz`) and ready probe (`/healthz/ready`)
-- ✅ Type-safe with TypeScript
-- ✅ Input/output validation with Zod
-- ✅ Correlation ID tracking (request tracing)
-- ✅ Error envelopes with taxonomy
-- ✅ Strict CORS configuration
-- ✅ Idempotency key support
-- ✅ Demo mode support
+- **MCP transport on `/mcp`** (rewrites to `/api/server`) using `mcp-handler` with Streamable HTTP
+- **Serverless by default** on Vercel (Node.js 22 runtime, 300s max for MCP handler)
+- **Commerce tools** for Shopify search and Stripe checkout/payment status with demo-mode mocks
+- **TypeScript + Zod** input/output validation across handlers
+- **Health and readiness probes** for monitoring (`/api/healthz`, `/api/healthz/ready`)
+- **Strict CORS allowlist** with normalized origin matching
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js 20+
-- Vercel account (for deployment)
+- Node.js 22+
+- Vercel CLI installed (`npm i -g vercel`)
 
 ### Local Development
 
 ```bash
-# Install dependencies
-npm install
-
-# Run local development (if using Vercel CLI)
 cd vercel-server
 npm install
-vercel dev
+npm run dev   # runs `vercel dev` with the MCP route rewrite
 ```
 
-### Deployment to Vercel
-
-See [vercel-server/DEPLOYMENT.md](./vercel-server/DEPLOYMENT.md) for detailed deployment instructions.
-
-**Quick deploy:**
+### Deploy to Vercel
 
 ```bash
 cd vercel-server
@@ -59,116 +39,69 @@ npm install
 vercel --prod
 ```
 
-## API Endpoints
+See `vercel-server/DEPLOYMENT.md` if you need a step-by-step guide for setting env vars in the Vercel dashboard.
 
-### Root
-```
-GET /
-```
-Returns MCP discovery metadata.
+## MCP Endpoint
 
-### SSE Endpoint
-```
-GET /sse
-```
-Server-Sent Events endpoint for MCP transport.
+- **Base path:** `/mcp` (rewrites to `/api/server` via `vercel.json`)
+- **Methods:** `GET`, `POST`, `DELETE` (per `mcp-handler`)
+- **Protocol:** MCP JSON-RPC (`initialize`, `tools/list`, `tools/call`) over HTTP streaming; SSE is disabled.
 
-### MCP Manifest
-```
-GET /mcp-manifest.json
-```
-Returns the MCP manifest describing all available tools.
+Example (list tools):
 
-### List Tools
-```
-GET /tools
-```
-Returns list of available MCP tools.
-
-### Execute Tool
-```
-POST /tools/{toolName}
-Content-Type: application/json
-X-Correlation-ID: <optional>
-X-Idempotency-Key: <optional>
-
-{
-  "params": {
-    "key": "value"
-  }
-}
+```bash
+curl -X POST https://your-deployment.vercel.app/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tools/list","params":{}}'
 ```
 
-### Health Check
-```
-GET /healthz
-```
-Returns server status.
+## Health Endpoints
 
-### Ready Probe
-```
-GET /healthz/ready
-```
-Returns readiness status.
+- `GET /api/healthz` – liveness check
+- `GET /api/healthz/ready` – readiness probe
 
 ## Available Tools
 
-- `ping` - Connectivity test
-- `shopify.searchProducts` - Search products in Shopify store
-- `stripe.createCheckoutSession` - Create Stripe Checkout Session (legacy API)
-- `stripe_create_checkout_session` - Create Stripe checkout session with product name and price
-- `stripe_get_payment_status` - Get payment status for a payment intent
+- `ping` — simple connectivity test (`name` optional)
+- `shopify_search_products` — search Shopify products (`query`, optional `limit`)
+- `stripe_create_checkout_session` — simple checkout by product name/price (`productName`, `price`, optional `currency`, optional `successUrl`/`cancelUrl`)
+- `stripe_create_checkout_session_legacy` — checkout using Stripe price IDs (`items[] { priceId, quantity }`, `successUrl`, `cancelUrl`)
+- `stripe_get_payment_status` — fetch payment intent status (`paymentIntentId`)
+
+Demo mode (`DEMO_MODE=true`) returns mock data for all tools and requires no API keys.
 
 ## Configuration
 
-### Environment Variables
-
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `SHOPIFY_STORE_URL` | Shopify store domain | Yes* |
+| `DEMO_MODE` | Enable mock responses | Yes |
+| `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` | Shopify store domain/subdomain | Yes* |
 | `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | Yes* |
+| `SHOPIFY_API_VERSION` | Shopify API version (default `2024-10`) | Optional |
 | `STRIPE_SECRET_KEY` | Stripe secret key | Yes* |
-| `DEMO_MODE` | Enable demo mode (mock responses) | Yes |
-| `MCP_SERVER_URL` | Public MCP server URL | Yes |
-| `NEXT_PUBLIC_SITE_URL` | Frontend URL (for Stripe redirects) | Recommended |
+| `MCP_SERVER_URL` | Public MCP server URL override | Optional |
+| `NEXT_PUBLIC_SITE_URL` | Frontend URL for checkout redirects | Recommended |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins | Optional |
 
-*Required unless `DEMO_MODE=true`
-
-## Demo Mode vs Live Mode
-
-### Demo Mode (`DEMO_MODE=true`)
-
-- Returns mock responses for all tools
-- No API keys required
-- Perfect for demos, testing, and development
-
-### Live Mode (`DEMO_MODE=false`)
-
-- Connects to real APIs (Shopify, Stripe)
-- Requires API keys in environment variables
-- Real implementations in `vercel-server/lib/tools/`
+*Required unless `DEMO_MODE=true`.
 
 ## Project Structure
 
 ```
 .
-├── vercel-server/          # Vercel deployment
-│   ├── api/               # Serverless functions
-│   │   ├── index.ts      # Root route
-│   │   ├── sse.ts        # SSE endpoint
-│   │   ├── mcp-manifest.ts
-│   │   ├── tools.ts      # List tools
-│   │   ├── tools/[toolName].ts
-│   │   └── healthz.ts
-│   ├── lib/              # Shared utilities
-│   │   ├── utils.ts
-│   │   ├── schemas.ts
-│   │   ├── cors.ts
-│   │   └── tools/        # Tool implementations
+├── vercel-server/
+│   ├── api/
+│   │   ├── server.ts          # MCP handler (Streamable HTTP at /mcp -> /api/server)
+│   │   ├── healthz.ts         # Liveness probe
+│   │   └── healthz/ready.ts   # Readiness probe
+│   ├── lib/
+│   │   ├── cors.ts            # CORS allowlist + preflight handling
+│   │   ├── schemas.ts         # Zod schemas
+│   │   ├── utils.ts           # Helper utilities (demo mode, URLs, errors)
+│   │   └── tools/             # Tool implementations
 │   │       ├── shopify.ts
 │   │       └── stripe.ts
-│   ├── vercel.json       # Vercel configuration
+│   ├── vercel.json            # Route rewrite for /mcp → /api/server
 │   └── package.json
 ├── CHANGELOG.md
 ├── LICENSE
@@ -178,15 +111,10 @@ Returns readiness status.
 
 ## Security
 
-- **Security Headers** - Comprehensive security headers
-- **Strict CORS** - Environment-based origin allowlist
-- **Input/Output Validation** - Zod schemas for all requests/responses
-- **Error Taxonomy** - Standardized error codes
-- **Correlation IDs** - Request tracing for audit trails
-- **Idempotency Keys** - Prevents duplicate operations
-
-See [SECURITY.md](./SECURITY.md) for detailed security practices.
+- **CORS allowlist** built from ChatGPT origins, optional frontend URL, and env overrides
+- **Validated inputs/outputs** via Zod for health responses and tool payloads
+- **Demo-mode safety** to prevent accidental live API calls during testing
 
 ## License
 
-MIT - See [LICENSE](LICENSE) file for details.
+MIT - See [LICENSE](LICENSE) for details.

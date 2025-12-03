@@ -6,12 +6,7 @@
 mcp-http-server/
 ├── vercel-server/                    # Vercel deployment (main codebase)
 │   ├── api/                          # Serverless functions
-│   │   ├── index.ts                  # Root route (MCP discovery)
-│   │   ├── sse.ts                    # SSE endpoint (MCP transport)
-│   │   ├── mcp-manifest.ts           # MCP manifest endpoint
-│   │   ├── tools.ts                   # List tools endpoint
-│   │   ├── tools/
-│   │   │   └── [toolName].ts          # Dynamic tool execution
+│   │   ├── server.ts                 # MCP handler (Streamable HTTP, /mcp -> /api/server)
 │   │   ├── healthz.ts                # Health check
 │   │   └── healthz/
 │   │       └── ready.ts              # Readiness probe
@@ -54,11 +49,7 @@ mcp-http-server/
 All production code lives here. This is what gets deployed to Vercel.
 
 **API Routes:**
-- `api/index.ts` - Root endpoint for MCP discovery
-- `api/sse.ts` - Server-Sent Events for MCP transport
-- `api/mcp-manifest.ts` - MCP manifest endpoint
-- `api/tools.ts` - List available tools
-- `api/tools/[toolName].ts` - Dynamic tool execution
+- `api/server.ts` - MCP handler at `/mcp` (Streamable HTTP, SSE disabled)
 - `api/healthz.ts` - Health check
 - `api/healthz/ready.ts` - Readiness probe
 
@@ -91,12 +82,13 @@ See `vercel-server/DEPLOYMENT.md` for detailed instructions.
 
 Set in Vercel dashboard:
 
-- `SHOPIFY_STORE_URL` - Shopify store domain
+- `DEMO_MODE` - `false` for production (or `true` for mocks)
+- `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` - Shopify store domain/subdomain
 - `SHOPIFY_ACCESS_TOKEN` - Shopify Admin API token
+- `SHOPIFY_API_VERSION` - Optional API version (default `2024-10`)
 - `STRIPE_SECRET_KEY` - Stripe secret key
-- `DEMO_MODE` - Set to `false` for production
-- `MCP_SERVER_URL` - Your Vercel deployment URL
-- `NEXT_PUBLIC_SITE_URL` - Frontend URL (optional)
+- `MCP_SERVER_URL` - Optional public MCP URL override
+- `NEXT_PUBLIC_SITE_URL` - Frontend URL (optional, used for Stripe redirects)
 - `ALLOWED_ORIGINS` - CORS origins (optional)
 
 ## What Was Removed
@@ -117,4 +109,3 @@ Set in Vercel dashboard:
 ✅ **Fully aligned for Vercel deployment**
 ✅ **No obsolete or duplicate code**
 ✅ **Clear structure and documentation**
-

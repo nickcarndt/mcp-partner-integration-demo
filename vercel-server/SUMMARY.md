@@ -9,15 +9,10 @@ A fully functional Vercel-compatible serverless deployment of the MCP HTTP Serve
 ```
 vercel-server/
 ├── api/                          # Vercel serverless functions
-│   ├── index.ts                 # Root route (/) - MCP discovery
-│   ├── sse.ts                   # SSE endpoint (/sse) - MCP transport
-│   ├── mcp-manifest.ts          # Manifest endpoint (/mcp-manifest.json)
-│   ├── tools.ts                 # List tools endpoint (/tools)
-│   ├── tools/
-│   │   └── [toolName].ts        # Dynamic tool execution (/tools/:toolName)
-│   ├── healthz.ts               # Health check (/healthz)
+│   ├── server.ts                 # MCP handler (Streamable HTTP, /mcp -> /api/server)
+│   ├── healthz.ts                # Health check (/api/healthz)
 │   └── healthz/
-│       └── ready.ts             # Readiness probe (/healthz/ready)
+│       └── ready.ts              # Readiness probe (/api/healthz/ready)
 ├── lib/                          # Shared utilities
 │   ├── utils.ts                 # Utility functions (DEMO_MODE, getProductionUrl, etc.)
 │   ├── schemas.ts               # Zod validation schemas
@@ -46,11 +41,9 @@ vercel-server/
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/` | GET, POST | MCP discovery metadata |
-| `/sse` | GET | SSE endpoint for MCP transport |
-| `/mcp-manifest.json` | GET | MCP manifest |
-| `/tools` | GET | List available tools |
-| `/tools/:toolName` | POST | Execute a tool |
+| `/mcp` | GET, POST, DELETE | MCP Streamable HTTP (`initialize`, `tools/list`, `tools/call`) |
+| `/api/healthz` | GET | Health check |
+| `/api/healthz/ready` | GET | Readiness probe |
 | `/healthz` | GET | Health check |
 | `/healthz/ready` | GET | Readiness probe |
 
@@ -75,4 +68,3 @@ Required for production:
 5. **Verify**: Test all endpoints
 
 See [QUICKSTART.md](./QUICKSTART.md) for step-by-step instructions.
-

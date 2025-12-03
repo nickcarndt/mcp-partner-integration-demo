@@ -4,57 +4,19 @@
 
 All serverless functions have been refactored to use pure Vercel APIs (no Express) and optimized for Node.js runtime.
 
-### 1. `api/index.ts` - Discovery Endpoint
+### 1. `api/server.ts` - MCP Handler
 
-- Returns exact format requested:
-  ```json
-  {
-    "mcp": true,
-    "name": "partner-integration-demo",
-    "manifest": "/api/mcp-manifest.json",
-    "sse": "/api/sse"
-  }
-  ```
-- Uses pure Vercel Request/Response APIs
-- Node.js 18.x runtime
+- Single entrypoint for MCP Streamable HTTP (`/mcp` -> `/api/server` via `vercel.json`)
+- Uses `mcp-handler` with `initialize`, `tools/list`, and `tools/call`
+- Registers tools: `ping`, `shopify_search_products`, `stripe_create_checkout_session`, `stripe_create_checkout_session_legacy`, `stripe_get_payment_status`
+- SSE is disabled; transport is Streamable HTTP only
+- Node.js 22 runtime with 300s maxDuration
 
-### 2. `api/mcp-manifest.ts` - MCP Manifest
+### 2. Health Endpoints
 
-- Uses `process.env.VERCEL_URL` for homepage
-- Falls back to `MCP_SERVER_URL` if set
-- Returns full MCP manifest with all tools
-- Node.js 18.x runtime
-
-### 3. `api/sse.ts` - SSE Endpoint (Optimized)
-
-**Key optimizations for instant streaming:**
-
-- Uses raw Node.js `res.write()` APIs
-- Headers set immediately:
-  - `Content-Type: text/event-stream`
-  - `Cache-Control: no-cache, no-transform`
-  - `Connection: keep-alive`
-  - `X-Accel-Buffering: no`
-  - `Content-Encoding: identity`
-- `flushHeaders()` called immediately
-- First event (`mcp.init`) sent within <50ms
-- Keep-alive ping every 30 seconds
-- Proper cleanup on disconnect
-- Node.js 18.x runtime (NOT Edge)
-
-### 4. Tool Handlers
-
-Created specific handlers for each tool:
-
-- `api/tool-ping.ts` - Ping tool
-- `api/tool-shopify.ts` - Shopify product search
-- `api/tool-stripe.ts` - Stripe checkout operations
-
-All handlers:
-- Use pure Vercel APIs
-- Node.js 18.x runtime
-- Proper CORS handling
-- Error handling with correlation IDs
+- `api/healthz.ts` - Liveness probe with CORS handling
+- `api/healthz/ready.ts` - Readiness probe with CORS handling
+- Both validated with Zod schemas
 
 ### 5. Removed
 
@@ -65,26 +27,22 @@ All handlers:
 
 ## Routing
 
-Vercel automatically routes:
-- `/api/index.ts` → `/` or `/api`
-- `/api/sse.ts` → `/api/sse`
-- `/api/mcp-manifest.ts` → `/api/mcp-manifest.json`
-- `/api/tool-ping.ts` → `/api/tool-ping`
-- `/api/tool-shopify.ts` → `/api/tool-shopify`
-- `/api/tool-stripe.ts` → `/api/tool-stripe`
+Vercel routes `/mcp` to `/api/server` via `vercel.json` rewrite:
+- `/mcp` → `/api/server` (GET/POST/DELETE per `mcp-handler`)
+- `/api/healthz`
+- `/api/healthz/ready`
 
 ## Environment Variables
 
 Functions use:
-- `VERCEL_URL` - Automatically set by Vercel
-- `MCP_SERVER_URL` - Optional override
 - `DEMO_MODE` - Demo mode flag
-- Other tool-specific env vars (SHOPIFY_*, STRIPE_*)
+- `MCP_SERVER_URL` - Optional public URL override
+- `SHOPIFY_STORE_URL` / `SHOPIFY_SHOP`, `SHOPIFY_ACCESS_TOKEN`, `SHOPIFY_API_VERSION`
+- `STRIPE_SECRET_KEY`
+- `NEXT_PUBLIC_SITE_URL`, `ALLOWED_ORIGINS`
 
 ## Performance
 
-- SSE streaming starts instantly (<50ms)
-- No buffering delays
-- Optimized for Vercel Serverless Functions
-- Proper connection cleanup
-
+- Streamable HTTP transport via `mcp-handler`
+- Strict CORS allowlist and normalized origin matching
+- Zod validation for health responses and tool schemas

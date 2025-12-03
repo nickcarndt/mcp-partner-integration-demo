@@ -30,6 +30,7 @@ STRIPE_SECRET_KEY=sk_test_...
 DEMO_MODE=false
 MCP_SERVER_URL=https://your-preview-url.vercel.app
 NEXT_PUBLIC_SITE_URL=https://your-frontend.vercel.app
+ALLOWED_ORIGINS=https://chat.openai.com,https://chatgpt.com
 ```
 
 ### 4. Deploy to Production
@@ -50,24 +51,24 @@ After production deployment:
 
 ```bash
 # Health check
-curl https://your-deployment.vercel.app/healthz
+curl https://your-deployment.vercel.app/api/healthz
 
-# MCP manifest
-curl https://your-deployment.vercel.app/mcp-manifest.json
-
-# Root endpoint
-curl https://your-deployment.vercel.app/
+# MCP Streamable HTTP
+curl -X POST https://your-deployment.vercel.app/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tools/list","params":{}}'
 ```
 
 ## Environment Variables Reference
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `SHOPIFY_STORE_URL` | Yes* | Shopify store domain |
+| `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` | Yes* | Shopify store domain/subdomain |
 | `SHOPIFY_ACCESS_TOKEN` | Yes* | Shopify Admin API token |
+| `SHOPIFY_API_VERSION` | Optional | Shopify API version (default `2024-10`) |
 | `STRIPE_SECRET_KEY` | Yes* | Stripe secret key |
-| `DEMO_MODE` | Yes | Set to `false` for production |
-| `MCP_SERVER_URL` | Yes | Your Vercel deployment URL |
+| `DEMO_MODE` | Yes | Set to `false` for production (or `true` for mock mode) |
+| `MCP_SERVER_URL` | Optional | Override public MCP URL |
 | `NEXT_PUBLIC_SITE_URL` | Recommended | Frontend URL for Stripe redirects |
 | `ALLOWED_ORIGINS` | Optional | Comma-separated CORS origins |
 
@@ -75,9 +76,8 @@ curl https://your-deployment.vercel.app/
 
 ## Troubleshooting
 
-- **SSE not working?** Check `vercel.json` runtime config and headers
 - **CORS errors?** Add your origin to `ALLOWED_ORIGINS`
 - **Env vars not working?** Ensure they're set for all environments and redeploy
+- **Cannot call tools?** POST MCP JSON-RPC requests to `/mcp` (rewritten to `/api/server`)
 
 For detailed instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
-

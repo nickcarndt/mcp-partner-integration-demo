@@ -1,19 +1,15 @@
 # MCP HTTP Server - Vercel Deployment
 
-This directory contains the Vercel-compatible serverless functions for the MCP HTTP Server.
+This directory contains the Vercel-compatible serverless functions for the MCP HTTP Server (Streamable HTTP, SSE disabled).
 
 ## Structure
 
 ```
 vercel-server/
 ├── api/                    # Vercel serverless functions
-│   ├── index.ts           # Root route (MCP discovery)
-│   ├── sse.ts             # SSE endpoint for MCP transport
-│   ├── mcp-manifest.ts    # MCP manifest endpoint
-│   ├── tools.ts           # List tools endpoint
-│   ├── tools/
-│   │   └── [toolName].ts  # Dynamic tool execution endpoint
-│   └── healthz.ts         # Health check endpoint
+│   ├── server.ts          # MCP handler (Streamable HTTP at /mcp -> /api/server)
+│   ├── healthz.ts         # Liveness probe
+│   └── healthz/ready.ts   # Readiness probe
 ├── lib/                    # Shared utilities
 │   ├── utils.ts           # Utility functions
 │   ├── schemas.ts         # Zod validation schemas
@@ -30,11 +26,12 @@ vercel-server/
 
 Required environment variables (set in Vercel dashboard):
 
-- `SHOPIFY_STORE_URL` - Shopify store domain
+- `DEMO_MODE` - Set to `false` for production (or `true` for mocks)
+- `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` - Shopify store domain/subdomain
 - `SHOPIFY_ACCESS_TOKEN` - Shopify Admin API token
+- `SHOPIFY_API_VERSION` - Optional API version (default `2024-10`)
 - `STRIPE_SECRET_KEY` - Stripe secret key
-- `DEMO_MODE` - Set to `false` for production
-- `MCP_SERVER_URL` - Your Vercel deployment URL (set after first deployment)
+- `MCP_SERVER_URL` - Optional override for the public MCP URL
 - `NEXT_PUBLIC_SITE_URL` - Frontend URL for Stripe redirects
 - `ALLOWED_ORIGINS` - Comma-separated list of allowed CORS origins
 
@@ -45,7 +42,7 @@ Required environment variables (set in Vercel dashboard):
 npm install
 
 # Run Vercel dev server
-npm run dev
+npm run dev   # runs `vercel dev` with /mcp rewrite
 
 # Type check
 npm run typecheck
@@ -54,4 +51,3 @@ npm run typecheck
 ## Deployment
 
 See `DEPLOYMENT.md` for step-by-step deployment instructions.
-
