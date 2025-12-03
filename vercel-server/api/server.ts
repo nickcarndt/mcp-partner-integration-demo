@@ -102,13 +102,17 @@ const handler = createMcpHandler(
 
 // Export handlers for Vercel (Web API style)
 export async function GET(request: Request): Promise<Response> {
+  console.log('[MCP] GET request received:', request.url);
   return handler(request);
 }
 
 export async function POST(request: Request): Promise<Response> {
+  console.log('[MCP] POST request received:', request.url);
+  console.log('[MCP] Headers:', Object.fromEntries(request.headers.entries()));
   return handler(request);
 }
 
 export async function DELETE(request: Request): Promise<Response> {
+  console.log('[MCP] DELETE request received:', request.url);
   return handler(request);
 }
