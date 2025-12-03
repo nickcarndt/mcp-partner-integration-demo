@@ -94,15 +94,15 @@ const handler = createMcpHandler(
   },
   { capabilities: { tools: {} } }, // serverOptions with capabilities
   {
-    disableSse: true, // Use Streamable HTTP only, no SSE
     verboseLogs: true, // Enable logging for debugging
+    // SSE enabled by default - needed for tool invocation via GET with Accept: text/event-stream
   }
 );
 
 // Export handlers for Vercel (Web API style)
 export async function GET(request: Request): Promise<Response> {
   console.log('[MCP] GET request:', request.url);
-  console.log('[MCP] GET headers:', Object.fromEntries(request.headers.entries()));
+  console.log('[MCP] GET Accept header:', request.headers.get('accept'));
   return handler(request);
 }
 
