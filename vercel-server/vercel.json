@@ -1,14 +1,7 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/", "destination": "/api/server" },
-    { "source": "/index", "destination": "/api/server" },
-    { "source": "/api", "destination": "/api/server" },
     { "source": "/mcp", "destination": "/api/server" },
-    { "source": "/sse", "destination": "/api/server" },
-    { "source": "/message", "destination": "/api/server" },
-    { "source": "/favicon.ico", "destination": "/api/server" },
-    { "source": "/_vercel/(.*)", "destination": "/api/server" },
     { "source": "/(.*)", "destination": "/api/server" }
   ]
 }
