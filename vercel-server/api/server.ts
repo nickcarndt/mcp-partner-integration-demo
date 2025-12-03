@@ -17,12 +17,13 @@ export const config = {
   maxDuration: 300,
 };
 
-// Build the MCP handler with all tools registered. SSE is disabled; transport is POST /mcp.
+// Create MCP handler with all tools registered
+// This handles JSON-RPC 2.0 protocol: initialize, tools/list, tools/call
 const handler = createMcpHandler(
   (server) => {
     server.tool(
       'ping',
-      'Ping tool that returns a greeting',
+      'A simple ping tool that returns a greeting message',
       PingParamsSchema.shape,
       async (args) => {
         const name = args.name || 'World';
@@ -39,7 +40,7 @@ const handler = createMcpHandler(
 
     server.tool(
       'shopify_search_products',
-      'Search products in a Shopify store',
+      'Search for products in a Shopify store by query string',
       SearchProductsParamsSchema.shape,
       async (args) => {
         const result = await searchProducts(args, DEMO_MODE);
@@ -51,7 +52,7 @@ const handler = createMcpHandler(
 
     server.tool(
       'stripe_create_checkout_session',
-      'Create a Stripe checkout session with product name and price',
+      'Create a Stripe checkout session with a product name and price',
       SimpleCheckoutSessionParamsSchema.shape,
       async (args) => {
         const result = await createCheckoutSession(
@@ -82,7 +83,7 @@ const handler = createMcpHandler(
 
     server.tool(
       'stripe_get_payment_status',
-      'Get payment status for a Stripe payment intent',
+      'Get the payment status for a Stripe payment intent',
       GetPaymentStatusParamsSchema.shape,
       async (args) => {
         const result = await getPaymentStatus(args.paymentIntentId, DEMO_MODE);
@@ -92,24 +93,28 @@ const handler = createMcpHandler(
       }
     );
   },
-  undefined,
+  undefined, // serverOptions - use defaults
   {
-    basePath: '/mcp',
-    disableSse: true,
-    verboseLogs: true,
+    disableSse: true, // Use Streamable HTTP only, no SSE
+    verboseLogs: true, // Enable logging for debugging
   }
 );
 
-// Vercel adapter to convert VercelRequest/VercelResponse to the Web API expected by mcp-handler.
+// Vercel adapter: convert VercelRequest/VercelResponse to Web API Request/Response
 export default async function vercelHandler(req: VercelRequest, res: VercelResponse) {
+  // Only accept POST requests - MCP uses JSON-RPC 2.0 over POST
+  if (req.method !== 'POST') {
+    res.status(405);
+    res.setHeader('Content-Type', 'application/json');
+    return res.send(JSON.stringify({ error: 'Method not allowed. MCP requires POST requests.' }));
+  }
+
   const protocol = req.headers['x-forwarded-proto'] || 'https';
   const host = req.headers.host || 'localhost';
   const url = new URL(req.url || '/', `${protocol}://${host}`);
 
-  let body: string | undefined;
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
-  }
+  // Get request body for POST
+  const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
 
   const webRequest = new Request(url, {
     method: req.method,
@@ -117,8 +122,10 @@ export default async function vercelHandler(req: VercelRequest, res: VercelRespo
     body,
   });
 
+  // Call MCP handler - handles initialize, tools/list, tools/call
   const webResponse = await handler(webRequest);
 
+  // Convert Web API Response back to Vercel response
   res.status(webResponse.status);
   webResponse.headers.forEach((value, key) => {
     res.setHeader(key, value);
