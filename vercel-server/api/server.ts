@@ -109,7 +109,18 @@ export async function GET(request: Request): Promise<Response> {
 export async function POST(request: Request): Promise<Response> {
   console.log('[MCP] POST request received:', request.url);
   console.log('[MCP] Headers:', Object.fromEntries(request.headers.entries()));
-  return handler(request);
+  console.log('[MCP] Request method:', request.method);
+  console.log('[MCP] Request URL pathname:', new URL(request.url).pathname);
+  
+  try {
+    const response = await handler(request);
+    console.log('[MCP] Handler returned status:', response.status);
+    console.log('[MCP] Handler returned headers:', Object.fromEntries(response.headers.entries()));
+    return response;
+  } catch (error) {
+    console.error('[MCP] Handler error:', error);
+    throw error;
+  }
 }
 
 export async function DELETE(request: Request): Promise<Response> {
