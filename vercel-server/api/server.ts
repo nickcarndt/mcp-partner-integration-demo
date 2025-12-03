@@ -94,8 +94,8 @@ const handler = createMcpHandler(
   },
   { capabilities: { tools: {} } }, // serverOptions with capabilities
   {
-    verboseLogs: true, // Enable logging for debugging
-    // SSE enabled by default - needed for tool invocation via GET with Accept: text/event-stream
+    redisUrl: process.env.REDIS_URL,
+    verboseLogs: true,
   }
 );
 
