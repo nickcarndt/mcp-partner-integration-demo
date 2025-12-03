@@ -94,7 +94,6 @@ const handler = createMcpHandler(
   },
   { capabilities: { tools: {} } }, // serverOptions with capabilities
   {
-    basePath: '/mcp', // Match the route path
     disableSse: true, // Use Streamable HTTP only, no SSE
     verboseLogs: true, // Enable logging for debugging
   }
