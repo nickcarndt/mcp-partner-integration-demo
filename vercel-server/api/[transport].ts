@@ -18,6 +18,7 @@ export const config = {
 
 // Create MCP handler with all tools registered
 // This handles JSON-RPC 2.0 protocol: initialize, tools/list, tools/call
+// The [transport] dynamic segment determines SSE vs Streamable HTTP
 console.log('[MCP] REDIS_URL configured:', !!process.env.REDIS_URL);
 console.log('[MCP] REDIS_URL value:', process.env.REDIS_URL ? 'SET' : 'NOT SET');
 const handler = createMcpHandler(
@@ -102,22 +103,32 @@ const handler = createMcpHandler(
 );
 
 // Export handlers for Vercel (Web API style)
+// The [transport] segment in the URL path determines which transport mcp-handler uses
 export async function GET(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const transport = url.pathname.split('/').pop(); // Extract transport from path
   console.log('[MCP] GET request:', request.url);
+  console.log('[MCP] Transport:', transport);
   console.log('[MCP] GET Accept header:', request.headers.get('accept'));
   return handler(request);
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const transport = url.pathname.split('/').pop(); // Extract transport from path
   const body = await request.clone().text();
   console.log('[MCP] POST request:', request.url);
+  console.log('[MCP] Transport:', transport);
   console.log('[MCP] POST headers:', Object.fromEntries(request.headers.entries()));
   console.log('[MCP] POST body:', body);
   return handler(request);
 }
 
 export async function DELETE(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const transport = url.pathname.split('/').pop(); // Extract transport from path
   console.log('[MCP] DELETE request:', request.url);
+  console.log('[MCP] Transport:', transport);
   return handler(request);
 }
 
@@ -144,3 +155,4 @@ export async function PATCH(request: Request): Promise<Response> {
   console.log('[MCP] PATCH request (unexpected):', request.url);
   return new Response('Method not allowed', { status: 405 });
 }
+

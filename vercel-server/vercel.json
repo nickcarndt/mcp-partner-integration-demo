@@ -1,6 +1,7 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/mcp", "destination": "/api/server" }
+    { "source": "/mcp", "destination": "/api/mcp" },
+    { "source": "/sse", "destination": "/api/sse" }
   ]
 }
