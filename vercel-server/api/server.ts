@@ -1,5 +1,4 @@
 import { createMcpHandler } from 'mcp-handler';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { DEMO_MODE } from '../lib/utils.js';
 import { PingParamsSchema } from '../lib/schemas.js';
 import { searchProducts, SearchProductsParamsSchema } from '../lib/tools/shopify.js';
@@ -13,7 +12,7 @@ import {
 } from '../lib/tools/stripe.js';
 
 export const config = {
-  runtime: 'nodejs',
+  runtime: 'edge',
   maxDuration: 300,
 };
 
@@ -101,36 +100,15 @@ const handler = createMcpHandler(
   }
 );
 
-// Vercel adapter: convert VercelRequest/VercelResponse to Web API Request/Response
-async function vercelHandler(req: VercelRequest, res: VercelResponse) {
-  const protocol = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers.host || 'localhost';
-  const url = new URL(req.url || '/', `${protocol}://${host}`);
-
-  // Get request body
-  let body: string | undefined;
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
-  }
-
-  const webRequest = new Request(url, {
-    method: req.method,
-    headers: new Headers(req.headers as Record<string, string>),
-    body,
-  });
-
-  // Call MCP handler - handles initialize, tools/list, tools/call
-  const webResponse = await handler(webRequest);
-
-  // Convert Web API Response back to Vercel response
-  res.status(webResponse.status);
-  webResponse.headers.forEach((value, key) => {
-    res.setHeader(key, value);
-  });
-
-  const responseBody = await webResponse.text();
-  return res.send(responseBody);
+// Web API handlers - mcp-handler returns Response objects directly
+export async function GET(request: Request): Promise<Response> {
+  return handler(request);
 }
 
-// Export as GET, POST, DELETE to match mcp-handler expectations
-export { vercelHandler as GET, vercelHandler as POST, vercelHandler as DELETE };
+export async function POST(request: Request): Promise<Response> {
+  return handler(request);
+}
+
+export async function DELETE(request: Request): Promise<Response> {
+  return handler(request);
+}
