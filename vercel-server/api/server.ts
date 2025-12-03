@@ -184,7 +184,7 @@ export default async function vercelHandler(req: VercelRequest, res: VercelRespo
   const host = req.headers.host || 'localhost';
   const url = new URL(req.url || '/', `${protocol}://${host}`);
 
-  // Lightweight health/exists check for GET / and GET /mcp
+  // Universal GET handler with SSE fallback for any path/query
   if (req.method === 'GET') {
     const wantsSse = (req.headers.accept as string | undefined)?.includes('text/event-stream');
 
