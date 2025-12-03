@@ -1,4 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ReadyResponseSchema } from '../../lib/schemas.js';
 import { handleOptionsRequest, setCorsHeaders } from '../../lib/cors.js';
 
@@ -7,39 +6,20 @@ export const config = {
   maxDuration: 60,
 };
 
-/**
- * Readiness probe endpoint
- */
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  const origin = (req.headers.origin as string) || null;
+export async function OPTIONS(request: Request): Promise<Response> {
+  const origin = request.headers.get('origin');
+  const response = handleOptionsRequest(origin);
+  return response ?? new Response(null, { status: 403 });
+}
 
-  // Handle OPTIONS preflight
-  if (req.method === 'OPTIONS') {
-    const response = handleOptionsRequest(origin);
-    if (response) {
-      response.headers.forEach((value: string, key: string) => {
-        res.setHeader(key, value);
-      });
-      return res.status(response.status).end();
-    }
-    return res.status(403).end();
-  }
-
-  const headersObj: Record<string, string> = {};
-  setCorsHeaders(new Headers(), origin).forEach((value: string, key: string) => {
-    headersObj[key] = value;
-  });
-
-  // Set headers
-  Object.entries(headersObj).forEach(([key, value]) => {
-    res.setHeader(key, value);
-  });
+export async function GET(request: Request): Promise<Response> {
+  const origin = request.headers.get('origin');
+  const headers = setCorsHeaders(new Headers({ 'Content-Type': 'application/json' }), origin);
 
   const ready = {
     ok: true,
     ready: true as const,
   };
   const validated = ReadyResponseSchema.parse(ready);
-  return res.status(200).json(validated);
+  return new Response(JSON.stringify(validated), { status: 200, headers });
 }
-

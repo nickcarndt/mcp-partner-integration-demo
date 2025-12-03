@@ -12,7 +12,7 @@ import {
 } from '../lib/tools/stripe.js';
 
 export const config = {
-  runtime: 'edge',
+  runtime: 'nodejs',
   maxDuration: 300,
 };
 
@@ -100,7 +100,7 @@ const handler = createMcpHandler(
   }
 );
 
-// Web API handlers - mcp-handler returns Response objects directly
+// Export handlers for Vercel (Web API style)
 export async function GET(request: Request): Promise<Response> {
   return handler(request);
 }
