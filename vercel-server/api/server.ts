@@ -93,28 +93,25 @@ const handler = createMcpHandler(
       }
     );
   },
-  undefined, // serverOptions - use defaults
+  { capabilities: { tools: {} } }, // serverOptions with capabilities
   {
+    basePath: '/mcp', // Match the route path
     disableSse: true, // Use Streamable HTTP only, no SSE
     verboseLogs: true, // Enable logging for debugging
   }
 );
 
 // Vercel adapter: convert VercelRequest/VercelResponse to Web API Request/Response
-export default async function vercelHandler(req: VercelRequest, res: VercelResponse) {
-  // Only accept POST requests - MCP uses JSON-RPC 2.0 over POST
-  if (req.method !== 'POST') {
-    res.status(405);
-    res.setHeader('Content-Type', 'application/json');
-    return res.send(JSON.stringify({ error: 'Method not allowed. MCP requires POST requests.' }));
-  }
-
+async function vercelHandler(req: VercelRequest, res: VercelResponse) {
   const protocol = req.headers['x-forwarded-proto'] || 'https';
   const host = req.headers.host || 'localhost';
   const url = new URL(req.url || '/', `${protocol}://${host}`);
 
-  // Get request body for POST
-  const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
+  // Get request body
+  let body: string | undefined;
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
+  }
 
   const webRequest = new Request(url, {
     method: req.method,
@@ -134,3 +131,6 @@ export default async function vercelHandler(req: VercelRequest, res: VercelRespo
   const responseBody = await webResponse.text();
   return res.send(responseBody);
 }
+
+// Export as GET, POST, DELETE to match mcp-handler expectations
+export { vercelHandler as GET, vercelHandler as POST, vercelHandler as DELETE };
