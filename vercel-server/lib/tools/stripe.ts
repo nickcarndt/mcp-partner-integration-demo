@@ -66,6 +66,17 @@ export async function createCheckoutSession(
   session_id: string;
   payment_intent: string | null;
 }> {
+  // Validate price
+  if (price <= 0) {
+    throw new Error('Price must be greater than 0');
+  }
+
+  // Validate minimum amount (Stripe requires at least $0.50 USD or equivalent)
+  const minimumAmount = currency === 'usd' ? 0.5 : 0.01; // Adjust for other currencies if needed
+  if (price < minimumAmount) {
+    throw new Error(`Price must be at least ${minimumAmount} ${currency.toUpperCase()}`);
+  }
+
   if (demoMode) {
     return {
       checkout_url: 'https://example.com/demo-checkout',
@@ -82,6 +93,10 @@ export async function createCheckoutSession(
     const defaultSuccessUrl = successUrl || `${siteUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
     const defaultCancelUrl = cancelUrl || `${siteUrl}/cancel`;
 
+    // Convert price from dollars to cents (smallest currency unit)
+    // Stripe requires amounts in the smallest currency unit (cents for USD)
+    const unitAmountInCents = Math.round(price * 100);
+
     const session = await stripeClient.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -91,7 +106,7 @@ export async function createCheckoutSession(
             product_data: {
               name: productName,
             },
-            unit_amount: price, // price is already in cents
+            unit_amount: unitAmountInCents, // Convert dollars to cents
           },
           quantity: 1,
         },
