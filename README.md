@@ -9,7 +9,7 @@ A Vercel-hosted Model Context Protocol (MCP) server that exposes commerce tools 
 
 ## What This Is
 
-- **MCP transport on `/api/server`** (catch-all rewrite) using `mcp-handler` with Streamable HTTP and SSE enabled via Redis for session state
+- **MCP transport on `/api/server`** (catch-all rewrite; `/mcp` also works) using `mcp-handler` with Streamable HTTP and SSE enabled via Redis for session state
 - **Serverless by default** on Vercel (Node.js 22 runtime, 60s max for MCP handler)
 - **Commerce tools** for Shopify search and Stripe checkout/payment status
 - **TypeScript + Zod** input/output validation across handlers
@@ -68,17 +68,23 @@ curl -X POST https://your-deployment.vercel.app/mcp \
 - `stripe_create_checkout_session_legacy` — checkout using Stripe price IDs (`items[] { priceId, quantity }`, `successUrl`, `cancelUrl`)
 - `stripe_get_payment_status` — fetch payment intent status (`paymentIntentId`)
 
+Demo mode (`DEMO_MODE=true`) returns mock data for all tools and requires no API keys.
+
 ## Configuration
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` | Shopify store domain/subdomain | Yes |
-| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | Yes |
+| `REDIS_URL` | Redis connection string (required for SSE session state) | Yes |
+| `DEMO_MODE` | Enable mock responses (default: `false`) | Optional |
+| `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` | Shopify store domain/subdomain | Yes* |
+| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | Yes* |
 | `SHOPIFY_API_VERSION` | Shopify API version (default `2024-10`) | Optional |
-| `STRIPE_SECRET_KEY` | Stripe secret key | Yes |
+| `STRIPE_SECRET_KEY` | Stripe secret key | Yes* |
 | `MCP_SERVER_URL` | Public MCP server URL override | Optional |
 | `NEXT_PUBLIC_SITE_URL` | Frontend URL for checkout redirects | Recommended |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins | Optional |
+
+*Required unless `DEMO_MODE=true`.
 
 ## Project Structure
 
