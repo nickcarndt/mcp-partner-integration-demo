@@ -18,7 +18,15 @@ A Vercel-hosted Model Context Protocol (MCP) server that exposes commerce tools 
 
 ## Demo
 
+### Shopify Search via MCP  
+ChatGPT calling the `shopify_search_products` tool and returning live store inventory.
+
 ![ChatGPT searching Shopify products via MCP](vercel-server/docs/images/shopify-search.png)
+
+### Stripe Checkout Session via MCP  
+ChatGPT creating a Stripe Checkout Session end-to-end using the Stripe MCP tool.
+
+![ChatGPT creating Stripe checkout session](vercel-server/docs/images/stripe-checkout.png)
 
 ## Quick Start
 
