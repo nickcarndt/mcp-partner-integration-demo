@@ -27,7 +27,6 @@ Before deploying, prepare your environment variables. You'll set these in the Ve
 | `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | `shpat_...` |
 | `SHOPIFY_API_VERSION` | Shopify API version (optional) | `2024-10` |
 | `STRIPE_SECRET_KEY` | Stripe secret key | `sk_test_...` or `sk_live_...` |
-| `DEMO_MODE` | Enable demo mode | `false` (for production) |
 | `MCP_SERVER_URL` | MCP server URL override | Set after deployment (optional) |
 | `NEXT_PUBLIC_SITE_URL` | Frontend URL | `https://your-frontend.vercel.app` |
 | `ALLOWED_ORIGINS` | CORS origins (optional) | `https://chat.openai.com,https://chatgpt.com` |
@@ -63,7 +62,7 @@ This will create a preview deployment and give you a URL like:
    SHOPIFY_STORE_URL=your-store.myshopify.com
    SHOPIFY_ACCESS_TOKEN=shpat_...
    STRIPE_SECRET_KEY=sk_test_...
-   DEMO_MODE=false
+   REDIS_URL=redis://...
    MCP_SERVER_URL=https://mcp-http-server-abc123.vercel.app
    NEXT_PUBLIC_SITE_URL=https://your-frontend.vercel.app
    ALLOWED_ORIGINS=https://chat.openai.com,https://chatgpt.com
@@ -146,7 +145,7 @@ Expected responses:
 
 ### Function Timeout
 
-- MCP handler is configured for up to 300s (per `api/server.ts`)
+- MCP handler is configured for up to 60s (per `vercel.json`)
 - Health checks use the default (short) timeout
 - For longer operations, consider increasing timeout in `vercel.json`
 

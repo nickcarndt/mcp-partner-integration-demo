@@ -1,7 +1,5 @@
 import { v4 as uuid } from 'uuid';
 
-export const DEMO_MODE = process.env.DEMO_MODE === 'true';
-
 /**
  * Get the production URL for the MCP server
  * Uses MCP_SERVER_URL env var or constructs from Vercel deployment

@@ -46,7 +46,6 @@ export const HealthResponseSchema = z.object({
   ok: z.literal(true),
   status: z.literal('ok'),
   timestamp: z.string(),
-  demoMode: z.boolean(),
 });
 
 export const ReadyResponseSchema = z.object({

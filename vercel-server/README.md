@@ -32,7 +32,6 @@ A production-ready MCP (Model Context Protocol) server deployed on Vercel with S
    - `NEXT_PUBLIC_SITE_URL` - Frontend URL for redirects
    
    **Optional:**
-   - `DEMO_MODE` - Set to `true` to use mock data (default: `false`)
    - `NODE_ENV` - Set to `production` to disable verbose logs
 
 4. **Test locally**
@@ -70,7 +69,6 @@ A production-ready MCP (Model Context Protocol) server deployed on Vercel with S
 - `NEXT_PUBLIC_SITE_URL` - Frontend URL for checkout redirects
 
 ### Optional - General
-- `DEMO_MODE` - Set to `true` to use mock data instead of real API calls
 - `NODE_ENV` - Set to `production` to disable verbose logging
 
 ## Available Tools

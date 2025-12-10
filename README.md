@@ -5,13 +5,13 @@
 [![Deploy: Vercel](https://img.shields.io/badge/Deploy-Vercel-black.svg?logo=vercel)](https://vercel.com)
 [![Version](https://img.shields.io/badge/version-v0.1.1-green.svg)](CHANGELOG.md)
 
-A Vercel-hosted Model Context Protocol (MCP) server that exposes commerce tools over MCP's HTTP transport (Streamable HTTP, SSE disabled).
+A Vercel-hosted Model Context Protocol (MCP) server that exposes commerce tools over MCP's HTTP transport (Streamable HTTP with SSE enabled via Redis for session state).
 
 ## What This Is
 
-- **MCP transport on `/mcp`** (rewrites to `/api/server`) using `mcp-handler` with Streamable HTTP
-- **Serverless by default** on Vercel (Node.js 22 runtime, 300s max for MCP handler)
-- **Commerce tools** for Shopify search and Stripe checkout/payment status with demo-mode mocks
+- **MCP transport on `/api/server`** (catch-all rewrite) using `mcp-handler` with Streamable HTTP and SSE enabled via Redis for session state
+- **Serverless by default** on Vercel (Node.js 22 runtime, 60s max for MCP handler)
+- **Commerce tools** for Shopify search and Stripe checkout/payment status
 - **TypeScript + Zod** input/output validation across handlers
 - **Health and readiness probes** for monitoring (`/api/healthz`, `/api/healthz/ready`)
 - **Strict CORS allowlist** with normalized origin matching
@@ -43,9 +43,9 @@ See `vercel-server/DEPLOYMENT.md` if you need a step-by-step guide for setting e
 
 ## MCP Endpoint
 
-- **Base path:** `/mcp` (rewrites to `/api/server` via `vercel.json`)
+- **Base path:** `/api/server` (catch-all rewrite from root)
 - **Methods:** `GET`, `POST`, `DELETE` (per `mcp-handler`)
-- **Protocol:** MCP JSON-RPC (`initialize`, `tools/list`, `tools/call`) over HTTP streaming; SSE is disabled.
+- **Protocol:** MCP JSON-RPC (`initialize`, `tools/list`, `tools/call`) over HTTP streaming; SSE enabled via Redis for session state.
 
 Example (list tools):
 
@@ -68,22 +68,17 @@ curl -X POST https://your-deployment.vercel.app/mcp \
 - `stripe_create_checkout_session_legacy` — checkout using Stripe price IDs (`items[] { priceId, quantity }`, `successUrl`, `cancelUrl`)
 - `stripe_get_payment_status` — fetch payment intent status (`paymentIntentId`)
 
-Demo mode (`DEMO_MODE=true`) returns mock data for all tools and requires no API keys.
-
 ## Configuration
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `DEMO_MODE` | Enable mock responses | Yes |
-| `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` | Shopify store domain/subdomain | Yes* |
-| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | Yes* |
+| `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` | Shopify store domain/subdomain | Yes |
+| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | Yes |
 | `SHOPIFY_API_VERSION` | Shopify API version (default `2024-10`) | Optional |
-| `STRIPE_SECRET_KEY` | Stripe secret key | Yes* |
+| `STRIPE_SECRET_KEY` | Stripe secret key | Yes |
 | `MCP_SERVER_URL` | Public MCP server URL override | Optional |
 | `NEXT_PUBLIC_SITE_URL` | Frontend URL for checkout redirects | Recommended |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins | Optional |
-
-*Required unless `DEMO_MODE=true`.
 
 ## Project Structure
 
@@ -91,17 +86,18 @@ Demo mode (`DEMO_MODE=true`) returns mock data for all tools and requires no API
 .
 ├── vercel-server/
 │   ├── api/
-│   │   ├── server.ts          # MCP handler (Streamable HTTP at /mcp -> /api/server)
+│   │   ├── server.ts          # MCP handler (catch-all rewrite)
 │   │   ├── healthz.ts         # Liveness probe
-│   │   └── healthz/ready.ts   # Readiness probe
+│   │   └── healthz/
+│   │       └── ready.ts       # Readiness probe
 │   ├── lib/
 │   │   ├── cors.ts            # CORS allowlist + preflight handling
 │   │   ├── schemas.ts         # Zod schemas
-│   │   ├── utils.ts           # Helper utilities (demo mode, URLs, errors)
+│   │   ├── utils.ts           # Helper utilities (URLs, errors)
 │   │   └── tools/             # Tool implementations
 │   │       ├── shopify.ts
 │   │       └── stripe.ts
-│   ├── vercel.json            # Route rewrite for /mcp → /api/server
+│   ├── vercel.json            # Catch-all rewrite to /api/server
 │   └── package.json
 ├── CHANGELOG.md
 ├── LICENSE
@@ -113,7 +109,6 @@ Demo mode (`DEMO_MODE=true`) returns mock data for all tools and requires no API
 
 - **CORS allowlist** built from ChatGPT origins, optional frontend URL, and env overrides
 - **Validated inputs/outputs** via Zod for health responses and tool payloads
-- **Demo-mode safety** to prevent accidental live API calls during testing
 
 ## License
 

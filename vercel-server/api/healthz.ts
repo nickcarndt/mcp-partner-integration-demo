@@ -1,4 +1,3 @@
-import { DEMO_MODE } from '../lib/utils.js';
 import { HealthResponseSchema, ReadyResponseSchema } from '../lib/schemas.js';
 import { handleOptionsRequest, setCorsHeaders } from '../lib/cors.js';
 
@@ -33,7 +32,6 @@ export async function GET(request: Request): Promise<Response> {
     ok: true,
     status: 'ok' as const,
     timestamp: new Date().toISOString(),
-    demoMode: DEMO_MODE,
   };
   const validated = HealthResponseSchema.parse(health);
   return new Response(JSON.stringify(validated), { status: 200, headers });

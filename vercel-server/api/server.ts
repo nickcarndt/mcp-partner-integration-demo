@@ -1,6 +1,5 @@
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
-import { DEMO_MODE } from '../lib/utils.js';
 import { searchProducts } from '../lib/tools/shopify.js';
 import {
   createCheckoutSession,
@@ -27,7 +26,7 @@ const handler = createMcpHandler(
         limit: z.number().int().positive().optional().default(10),
       },
       async (args) => {
-        const result = await searchProducts(args, DEMO_MODE);
+        const result = await searchProducts(args);
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };
@@ -49,7 +48,6 @@ const handler = createMcpHandler(
           args.productName,
           args.price,
           args.currency || 'usd',
-          DEMO_MODE,
           args.successUrl,
           args.cancelUrl
         );
@@ -73,7 +71,7 @@ const handler = createMcpHandler(
         cancelUrl: z.string().url(),
       },
       async (args) => {
-        const result = await createCheckoutSessionLegacy(args, DEMO_MODE);
+        const result = await createCheckoutSessionLegacy(args);
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };
@@ -87,7 +85,7 @@ const handler = createMcpHandler(
         paymentIntentId: z.string(),
       },
       async (args) => {
-        const result = await getPaymentStatus(args.paymentIntentId, DEMO_MODE);
+        const result = await getPaymentStatus(args.paymentIntentId);
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };

@@ -12,7 +12,7 @@ const initializeStripe = (): Stripe => {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   if (!stripeSecretKey) {
     throw new Error(
-      'Stripe credentials not configured. Set STRIPE_SECRET_KEY environment variable, or use DEMO_MODE=true for mocks.'
+      'Stripe credentials not configured. Set STRIPE_SECRET_KEY environment variable.'
     );
   }
 
@@ -58,7 +58,6 @@ export async function createCheckoutSession(
   productName: string,
   price: number,
   currency: string = 'usd',
-  demoMode: boolean = false,
   successUrl?: string,
   cancelUrl?: string
 ): Promise<{
@@ -75,14 +74,6 @@ export async function createCheckoutSession(
   const minimumAmount = currency === 'usd' ? 0.5 : 0.01; // Adjust for other currencies if needed
   if (price < minimumAmount) {
     throw new Error(`Price must be at least ${minimumAmount} ${currency.toUpperCase()}`);
-  }
-
-  if (demoMode) {
-    return {
-      checkout_url: 'https://example.com/demo-checkout',
-      session_id: 'demo_session_123',
-      payment_intent: 'demo_pi_123',
-    };
   }
 
   try {
@@ -136,21 +127,12 @@ export async function createCheckoutSession(
  * Get payment status for a payment intent
  */
 export async function getPaymentStatus(
-  paymentIntentId: string,
-  demoMode: boolean = false
+  paymentIntentId: string
 ): Promise<{
   status: string;
   amount: number;
   currency: string;
 }> {
-  if (demoMode) {
-    return {
-      status: 'succeeded',
-      amount: 2999,
-      currency: 'usd',
-    };
-  }
-
   try {
     const stripeClient = initializeStripe();
 
@@ -179,25 +161,8 @@ export async function getPaymentStatus(
  */
 export async function createCheckoutSessionLegacy(
   params: CreateCheckoutSessionParams,
-  demoMode: boolean,
   idempotencyKey?: string
 ): Promise<any> {
-  if (demoMode) {
-    const sessionId = idempotencyKey
-      ? `cs_mock_${idempotencyKey}`
-      : `cs_mock_${Date.now()}`;
-    return {
-      ok: true,
-      sessionId,
-      url: `https://checkout.stripe.com/pay/${sessionId}`,
-      items: params.items,
-      successUrl: params.successUrl,
-      cancelUrl: params.cancelUrl,
-      createdAt: new Date().toISOString(),
-      idempotencyKey: idempotencyKey || undefined,
-    };
-  }
-
   try {
     const stripeClient = initializeStripe();
 

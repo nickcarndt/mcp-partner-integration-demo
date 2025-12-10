@@ -8,34 +8,16 @@ export const SearchProductsParamsSchema = z.object({
 export type SearchProductsParams = z.infer<typeof SearchProductsParamsSchema>;
 
 export async function searchProducts(
-  params: SearchProductsParams,
-  demoMode: boolean
+  params: SearchProductsParams
 ): Promise<any> {
-  if (demoMode) {
-    // Mock product search results
-    return {
-      ok: true,
-      products: Array.from({ length: Math.min(params.limit || 10, 5) }, (_, i) => ({
-        id: `prod_${i + 1}`,
-        title: `Mock Product ${i + 1} - ${params.query}`,
-        price: (19.99 + i * 10).toFixed(2),
-        vendor: 'Demo Vendor',
-        productType: 'Demo Type',
-        createdAt: new Date().toISOString(),
-      })),
-      total: 5,
-      query: params.query,
-    };
-  }
-
-  // Real Shopify Admin API implementation
+  // Shopify Admin API implementation
   // Support both SHOPIFY_STORE_URL and SHOPIFY_SHOP for flexibility
   const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL || process.env.SHOPIFY_SHOP;
   const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
 
   if (!shopifyStoreUrl || !shopifyAccessToken) {
     throw new Error(
-      'Shopify credentials not configured. Set SHOPIFY_STORE_URL (or SHOPIFY_SHOP) and SHOPIFY_ACCESS_TOKEN environment variables, or use DEMO_MODE=true for mocks.'
+      'Shopify credentials not configured. Set SHOPIFY_STORE_URL (or SHOPIFY_SHOP) and SHOPIFY_ACCESS_TOKEN environment variables.'
     );
   }
 
