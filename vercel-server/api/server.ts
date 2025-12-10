@@ -94,8 +94,8 @@ const handler = createMcpHandler(
       }
     );
   },
-  {},
-  {
+  {},  // second arg: serverOptions (empty)
+  {    // third arg: handlerConfig
     redisUrl: process.env.REDIS_URL,
   }
 );
