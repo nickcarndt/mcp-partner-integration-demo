@@ -94,10 +94,10 @@ const handler = createMcpHandler(
       }
     );
   },
+  {},
   {
     redisUrl: process.env.REDIS_URL,
-  } as any
+  }
 );
 
 export { handler as GET, handler as POST, handler as DELETE };
-
