@@ -5,16 +5,29 @@
 [![Deploy: Vercel](https://img.shields.io/badge/Deploy-Vercel-black.svg?logo=vercel)](https://vercel.com)
 [![Version](https://img.shields.io/badge/version-v0.1.1-green.svg)](CHANGELOG.md)
 
-A Vercel-hosted Model Context Protocol (MCP) server that exposes commerce tools over MCP's HTTP transport (Streamable HTTP with SSE enabled via Redis for session state).
+A lightweight commerce-focused MCP server deployed on Vercel. It exposes Shopify product search and Stripe Checkout creation through the Model Context Protocol using HTTP transport and SSE for session state.
 
-## What This Is
+## Demo
 
-- **MCP transport on `/api/server`** (catch-all rewrite; `/mcp` also works) using `mcp-handler` with Streamable HTTP and SSE enabled via Redis for session state
-- **Serverless by default** on Vercel (Node.js 22 runtime, 60s max for MCP handler)
-- **Commerce tools** for Shopify search and Stripe checkout/payment status
-- **TypeScript + Zod** input/output validation across handlers
-- **Health and readiness probes** for monitoring (`/api/healthz`, `/api/healthz/ready`)
-- **Strict CORS allowlist** with normalized origin matching
+### Shopify Search via MCP  
+ChatGPT calling the `shopify_search_products` tool and returning live store inventory.
+
+![ChatGPT searching Shopify products via MCP](vercel-server/docs/images/shopify-search.png)
+
+### Stripe Checkout Session via MCP  
+ChatGPT creating a Stripe Checkout Session end-to-end using the Stripe MCP tool.
+
+![ChatGPT creating Stripe checkout session](vercel-server/docs/images/stripe-checkout.png)
+
+## Features
+
+- MCP HTTP transport at `/api/server` (with `/mcp` rewrite) using `mcp-handler`
+- Streamable HTTP + SSE via Redis for stateful MCP sessions
+- Vercel serverless runtime (Node.js 22) with 60s max execution
+- Commerce tools: Shopify product search and Stripe Checkout creation/payment lookups
+- Strict Zod validation across tools
+- Health & readiness endpoints (`/api/healthz`, `/api/healthz/ready`)
+- CORS allowlist optimized for ChatGPT access
 
 ## Quick Start
 
@@ -43,9 +56,10 @@ See `vercel-server/DEPLOYMENT.md` if you need a step-by-step guide for setting e
 
 ## MCP Endpoint
 
+MCP transport served at `/api/server` using `mcp-handler`, with Streamable HTTP and optional SSE-based session state (via Redis).
+
 - **Base path:** `/api/server` (catch-all rewrite from root)
 - **Methods:** `GET`, `POST`, `DELETE` (per `mcp-handler`)
-- **Protocol:** MCP JSON-RPC (`initialize`, `tools/list`, `tools/call`) over HTTP streaming; SSE enabled via Redis for session state.
 
 Example (list tools):
 
@@ -62,29 +76,24 @@ curl -X POST https://your-deployment.vercel.app/mcp \
 
 ## Available Tools
 
-- `ping` — simple connectivity test (`name` optional)
-- `shopify_search_products` — search Shopify products (`query`, optional `limit`)
-- `stripe_create_checkout_session` — simple checkout by product name/price (`productName`, `price`, optional `currency`, optional `successUrl`/`cancelUrl`)
-- `stripe_create_checkout_session_legacy` — checkout using Stripe price IDs (`items[] { priceId, quantity }`, `successUrl`, `cancelUrl`)
-- `stripe_get_payment_status` — fetch payment intent status (`paymentIntentId`)
-
-Demo mode (`DEMO_MODE=true`) returns mock data for all tools and requires no API keys.
+- `ping` — Connectivity + MCP handshake validation
+- `shopify_search_products` — Query Shopify Admin API for matching products
+- `stripe_create_checkout_session` — Create a Stripe-hosted Checkout Session (price interpreted in dollars)
+- `stripe_create_checkout_session_legacy` — Create sessions using existing Stripe Price IDs
+- `stripe_get_payment_status` — Retrieve payment status for a PaymentIntent
 
 ## Configuration
 
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `REDIS_URL` | Redis connection string (required for SSE session state) | Yes |
-| `DEMO_MODE` | Enable mock responses (default: `false`) | Optional |
-| `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` | Shopify store domain/subdomain | Yes* |
-| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | Yes* |
+| `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` | Shopify store domain/subdomain | Yes |
+| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | Yes |
 | `SHOPIFY_API_VERSION` | Shopify API version (default `2024-10`) | Optional |
-| `STRIPE_SECRET_KEY` | Stripe secret key | Yes* |
+| `STRIPE_SECRET_KEY` | Stripe secret key | Yes |
 | `MCP_SERVER_URL` | Public MCP server URL override | Optional |
 | `NEXT_PUBLIC_SITE_URL` | Frontend URL for checkout redirects | Recommended |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins | Optional |
-
-*Required unless `DEMO_MODE=true`.
 
 ## Project Structure
 
