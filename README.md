@@ -3,7 +3,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-22.x-green?logo=node.js)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Deploy: Vercel](https://img.shields.io/badge/Deploy-Vercel-black.svg?logo=vercel)](https://vercel.com)
-[![Version](https://img.shields.io/badge/version-v0.1.1-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v0.1.1-green.svg)](https://github.com/nickcarndt/mcp-partner-integration-demo/releases)
 
 A lightweight, production-ready MCP server for commerce workflows.
 Deployed on Vercel and integrated with Shopify and Stripe through custom MCP tools.
