@@ -16,6 +16,10 @@ A Vercel-hosted Model Context Protocol (MCP) server that exposes commerce tools 
 - **Health and readiness probes** for monitoring (`/api/healthz`, `/api/healthz/ready`)
 - **Strict CORS allowlist** with normalized origin matching
 
+## Demo
+
+![ChatGPT searching Shopify products via MCP](vercel-server/docs/images/shopify-search.png)
+
 ## Quick Start
 
 ### Prerequisites
