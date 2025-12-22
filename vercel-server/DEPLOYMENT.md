@@ -23,6 +23,7 @@ Before deploying, prepare your environment variables. You'll set these in the Ve
 
 | Variable | Description | Example |
 |----------|-------------|---------|
+| `REDIS_URL` | Redis connection string (for SSE session state) | `rediss://default:token@host:6379` |
 | `SHOPIFY_STORE_URL` or `SHOPIFY_SHOP` | Shopify store domain/subdomain | `your-store.myshopify.com` |
 | `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | `shpat_...` |
 | `SHOPIFY_API_VERSION` | Shopify API version (optional) | `2024-10` |
@@ -60,6 +61,7 @@ This will create a preview deployment and give you a URL like:
 4. Add each environment variable:
 
    ```
+   REDIS_URL=rediss://default:token@host:6379
    SHOPIFY_STORE_URL=your-store.myshopify.com
    SHOPIFY_ACCESS_TOKEN=shpat_...
    STRIPE_SECRET_KEY=sk_test_...
