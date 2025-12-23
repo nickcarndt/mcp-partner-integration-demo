@@ -29,7 +29,7 @@ Before deploying, prepare your environment variables. You'll set these in the Ve
 | `SHOPIFY_API_VERSION` | Shopify API version (optional) | `2024-10` |
 | `STRIPE_SECRET_KEY` | Stripe secret key | `sk_test_...` or `sk_live_...` |
 | `DEMO_MODE` | Enable demo mode | `false` (for production) |
-| `MCP_SERVER_URL` | MCP server URL override | Set after deployment (optional) |
+| `MCP_SERVER_URL` | Base MCP server URL (no `/mcp` suffix) | Set after deployment (optional) |
 | `NEXT_PUBLIC_SITE_URL` | Frontend URL | `https://your-frontend.vercel.app` |
 | `ALLOWED_ORIGINS` | CORS origins (optional) | `https://chat.openai.com,https://chatgpt.com` |
 
@@ -67,6 +67,7 @@ This will create a preview deployment and give you a URL like:
    STRIPE_SECRET_KEY=sk_test_...
    DEMO_MODE=false
    MCP_SERVER_URL=https://mcp-http-server-abc123.vercel.app
+   # Note: MCP_SERVER_URL is the base URL (no /mcp suffix)
    NEXT_PUBLIC_SITE_URL=https://your-frontend.vercel.app
    ALLOWED_ORIGINS=https://chat.openai.com,https://chatgpt.com
    ```
@@ -89,7 +90,7 @@ After setting the environment variables, you need to update `MCP_SERVER_URL` wit
 3. Update `MCP_SERVER_URL` in Vercel dashboard:
    - Go to **Settings** → **Environment Variables**
    - Edit `MCP_SERVER_URL`
-   - Set to your production URL: `https://mcp-http-server.vercel.app`
+   - Set to your production base URL (no `/mcp` suffix): `https://mcp-http-server.vercel.app`
    - Save
 
 4. Redeploy to apply the change:

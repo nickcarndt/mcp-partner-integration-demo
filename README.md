@@ -73,8 +73,16 @@ MCP transport is served at `/api/server` using `mcp-handler`, with Streamable HT
 Example — list tools:
 
 ```bash
-curl -X POST https://your-deployment.vercel.app/mcp \
+curl -X POST https://mcp-partner-integration-demo.vercel.app/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tools/list","params":{}}'
+```
+
+**Sanity check:**
+```bash
+curl -X POST https://mcp-partner-integration-demo.vercel.app/mcp \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":"1","method":"tools/list","params":{}}'
 ```
 
@@ -102,7 +110,7 @@ curl -X POST https://your-deployment.vercel.app/mcp \
 | `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API token | Yes |
 | `SHOPIFY_API_VERSION` | Defaults to `2024-10` | Optional |
 | `STRIPE_SECRET_KEY` | Stripe secret key | Yes |
-| `MCP_SERVER_URL` | Public MCP URL override | Optional |
+| `MCP_SERVER_URL` | Base MCP server URL (no `/mcp` suffix) | Optional |
 | `NEXT_PUBLIC_SITE_URL` | Frontend URL for checkout redirects | Recommended |
 | `ALLOWED_ORIGINS` | Comma-separated CORS allowlist | Optional |
 
@@ -156,6 +164,8 @@ curl -X POST https://your-deployment.vercel.app/mcp \
 
 Public, rate-limited, and intended for evaluation/testing.
 Not intended for production traffic or large workloads.
+
+**Note:** Set `MCP_SERVER_URL` to the base URL (e.g., `https://mcp-partner-integration-demo.vercel.app`) without the `/mcp` suffix.
 
 ## License
 
