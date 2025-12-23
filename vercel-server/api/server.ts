@@ -107,17 +107,25 @@ async function wrapHandler(
     return await handler(request);
   } catch (error: any) {
     // Only catch Redis connectivity/session errors when REDIS_URL is configured
+    // Be very conservative - only catch errors that are clearly Redis-related
     if (process.env.REDIS_URL) {
       const errorMessage = (error?.message || String(error)).toLowerCase();
       const errorCode = error?.code;
       
-      // Specific Redis error patterns - be conservative to avoid masking real bugs
-      const isRedisError =
-        errorMessage.includes('redis') ||
-        (errorCode === 'ECONNREFUSED' && errorMessage.includes('redis')) ||
-        (errorCode === 'ENOTFOUND' && errorMessage.includes('redis'));
+      // Only catch errors that explicitly indicate Redis connection/session failures
+      // Require both "redis" in message AND connection-related indicators to avoid false positives
+      const isRedisConnectionError =
+        (errorMessage.includes('redis') &&
+          (errorMessage.includes('connect') ||
+            errorMessage.includes('connection') ||
+            errorMessage.includes('econnrefused') ||
+            errorMessage.includes('enotfound') ||
+            errorCode === 'ECONNREFUSED' ||
+            errorCode === 'ENOTFOUND')) ||
+        errorMessage.includes('redis client') ||
+        errorMessage.includes('redis connection');
       
-      if (isRedisError) {
+      if (isRedisConnectionError) {
         const origin = request.headers.get('origin');
         const headers = setCorsHeaders(
           new Headers({ 'Content-Type': 'application/json' }),
