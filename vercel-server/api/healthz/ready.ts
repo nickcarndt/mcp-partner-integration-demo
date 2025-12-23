@@ -42,6 +42,8 @@ export async function OPTIONS(request: Request): Promise<Response> {
 export async function GET(request: Request): Promise<Response> {
   const origin = request.headers.get('origin');
   const headers = setCorsHeaders(new Headers({ 'Content-Type': 'application/json' }), origin);
+  headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  headers.set('Pragma', 'no-cache');
 
   // Only check Redis if REDIS_URL is configured
   if (process.env.REDIS_URL) {

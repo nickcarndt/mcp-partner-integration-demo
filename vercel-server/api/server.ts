@@ -99,13 +99,42 @@ const baseHandler = createMcpHandler(
   }
 );
 
+function addCacheHeaders(headers: Headers): Headers {
+  headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  headers.set('Pragma', 'no-cache');
+  return headers;
+}
+
+function logRequest(method: string, path: string, status: number): void {
+  console.log(`[MCP] ${method} ${path} ${status}`);
+}
+
 async function wrapHandler(
   request: Request,
-  handler: (request: Request) => Promise<Response>
+  handler: (request: Request) => Promise<Response>,
+  method: string
 ): Promise<Response> {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  
   try {
-    return await handler(request);
+    const response = await handler(request);
+    const status = response.status;
+    logRequest(method, path, status);
+    
+    // Add cache headers to response
+    const newHeaders = new Headers(response.headers);
+    addCacheHeaders(newHeaders);
+    
+    return new Response(response.body, {
+      status,
+      statusText: response.statusText,
+      headers: newHeaders,
+    });
   } catch (error: any) {
+    const status = 500;
+    logRequest(method, path, status);
+    
     // Only catch Redis connectivity/session errors when REDIS_URL is configured
     // Be very conservative - only catch errors that are clearly Redis-related
     if (process.env.REDIS_URL) {
@@ -131,6 +160,7 @@ async function wrapHandler(
           new Headers({ 'Content-Type': 'application/json' }),
           origin
         );
+        addCacheHeaders(headers);
         return new Response(
           JSON.stringify({
             jsonrpc: '2.0',
@@ -150,13 +180,34 @@ async function wrapHandler(
 }
 
 export async function GET(request: Request): Promise<Response> {
-  return wrapHandler(request, baseHandler);
+  // Handle GET requests for discovery probes with helpful JSON response
+  const origin = request.headers.get('origin');
+  const headers = setCorsHeaders(
+    new Headers({ 'Content-Type': 'application/json' }),
+    origin
+  );
+  addCacheHeaders(headers);
+  
+  logRequest('GET', new URL(request.url).pathname, 200);
+  
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      protocol: 'MCP',
+      usage: 'Use POST with JSON-RPC 2.0 format. See /api/healthz for status.',
+      endpoints: {
+        health: '/api/healthz',
+        ready: '/api/healthz/ready',
+      },
+    }),
+    { status: 200, headers }
+  );
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return wrapHandler(request, baseHandler);
+  return wrapHandler(request, baseHandler, 'POST');
 }
 
 export async function DELETE(request: Request): Promise<Response> {
-  return wrapHandler(request, baseHandler);
+  return wrapHandler(request, baseHandler, 'DELETE');
 }
