@@ -136,6 +136,20 @@ curl -X POST https://your-deployment.vercel.app/mcp \
 - **Strict Zod validation** for every tool and endpoint
 - **No unauthenticated commerce actions** outside MCP tool boundaries
 
+## Troubleshooting
+
+### Redis/Upstash
+
+**Symptom:** `/api/healthz/ready` returns 503 or MCP tools fail with "Redis unavailable"
+
+**Cause:** Upstash free tier may delete inactive databases after ~2 weeks of inactivity
+
+**Fix:**
+1. Restore or recreate Redis instance in Upstash dashboard
+2. Update `REDIS_URL` environment variable in Vercel
+3. Redeploy: `vercel --prod` or trigger redeploy from dashboard
+4. Verify: `curl https://your-deployment.vercel.app/api/healthz/ready` should return 200
+
 ## Live MCP Endpoint (Demo)
 
 **https://mcp-partner-integration-demo.vercel.app/mcp**

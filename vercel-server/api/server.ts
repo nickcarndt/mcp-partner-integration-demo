@@ -6,8 +6,9 @@ import {
   createCheckoutSessionLegacy,
   getPaymentStatus,
 } from '../lib/tools/stripe.js';
+import { handleOptionsRequest, setCorsHeaders } from '../lib/cors.js';
 
-const handler = createMcpHandler(
+const baseHandler = createMcpHandler(
   (server) => {
     server.tool(
       'ping',
@@ -98,4 +99,56 @@ const handler = createMcpHandler(
   }
 );
 
-export { handler as GET, handler as POST, handler as DELETE };
+async function wrapHandler(
+  request: Request,
+  handler: (request: Request) => Promise<Response>
+): Promise<Response> {
+  try {
+    return await handler(request);
+  } catch (error: any) {
+    // Only catch Redis connectivity/session errors when REDIS_URL is configured
+    if (process.env.REDIS_URL) {
+      const errorMessage = (error?.message || String(error)).toLowerCase();
+      const errorCode = error?.code;
+      
+      // Specific Redis error patterns - be conservative to avoid masking real bugs
+      const isRedisError =
+        errorMessage.includes('redis') ||
+        (errorCode === 'ECONNREFUSED' && errorMessage.includes('redis')) ||
+        (errorCode === 'ENOTFOUND' && errorMessage.includes('redis'));
+      
+      if (isRedisError) {
+        const origin = request.headers.get('origin');
+        const headers = setCorsHeaders(
+          new Headers({ 'Content-Type': 'application/json' }),
+          origin
+        );
+        return new Response(
+          JSON.stringify({
+            jsonrpc: '2.0',
+            error: {
+              code: -32000,
+              message: 'Redis unavailable. Check /api/healthz/ready for details.',
+            },
+            id: null,
+          }),
+          { status: 503, headers }
+        );
+      }
+    }
+    // Re-throw all other errors to surface real bugs (will return 500)
+    throw error;
+  }
+}
+
+export async function GET(request: Request): Promise<Response> {
+  return wrapHandler(request, baseHandler);
+}
+
+export async function POST(request: Request): Promise<Response> {
+  return wrapHandler(request, baseHandler);
+}
+
+export async function DELETE(request: Request): Promise<Response> {
+  return wrapHandler(request, baseHandler);
+}
